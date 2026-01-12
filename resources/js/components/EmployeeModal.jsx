@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { API } from '../api';
+import { useToast } from '../context/ToastContext';
 
 const EmployeeModal = ({ employee, onClose, onSuccess }) => {
     const isEdit = !!employee;
+    const { addToast } = useToast();
     const {
         register,
         handleSubmit,
         reset,
         setError,
         watch,
-        formState: { errors, isSubmitting }
+        formState: { errors, isSubmitting, isValid }
     } = useForm({
         mode: 'onChange',
         defaultValues: {
@@ -57,6 +59,7 @@ const EmployeeModal = ({ employee, onClose, onSuccess }) => {
                 } catch (err) {
                     console.error('Failed to fetch employee details', err);
                     setGlobalError('Failed to fetch fresh data for this employee.');
+                    addToast('Failed to load employee details', 'error');
                 } finally {
                     setFetchingData(false);
                 }
@@ -73,7 +76,7 @@ const EmployeeModal = ({ employee, onClose, onSuccess }) => {
                 password_confirmation: ''
             });
         }
-    }, [isEdit, employee, reset]);
+    }, [isEdit, employee, reset, addToast]);
 
     const onSubmit = async (data) => {
         setGlobalError('');
@@ -90,14 +93,19 @@ const EmployeeModal = ({ employee, onClose, onSuccess }) => {
 
             if (isEdit) {
                 await API.updateEmployee(employee.id, dataToSend);
+                addToast('Employee updated successfully', 'success');
             } else {
                 await API.createEmployee(dataToSend);
+                addToast('Employee created successfully', 'success');
             }
 
             onSuccess();
             onClose();
         } catch (err) {
             console.error('Save error:', err);
+            const msg = err.message || 'Failed to save employee';
+            addToast(msg, 'error');
+
             if (err.errors) {
                 Object.keys(err.errors).forEach(key => {
                     setError(key, {
@@ -106,7 +114,7 @@ const EmployeeModal = ({ employee, onClose, onSuccess }) => {
                     });
                 });
             } else {
-                setGlobalError(err.message || 'Failed to save employee');
+                setGlobalError(msg);
             }
         }
     };
@@ -253,7 +261,7 @@ const EmployeeModal = ({ employee, onClose, onSuccess }) => {
 
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
                                 <button type="button" className="btn btn-secondary btn-full" onClick={onClose}>Cancel</button>
-                                <button type="submit" className="btn btn-primary btn-full" disabled={isSubmitting}>
+                                <button type="submit" className="btn btn-primary btn-full" disabled={isSubmitting || !isValid}>
                                     <span>{isEdit ? 'Update Employee' : 'Create Employee'}</span>
                                     {isSubmitting && <span className="spinner"></span>}
                                 </button>

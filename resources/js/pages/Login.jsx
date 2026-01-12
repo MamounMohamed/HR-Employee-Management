@@ -8,7 +8,7 @@ const Login = () => {
     const navigate = useNavigate();
 
     // Setup form hook
-    const { register, handleSubmit, formState: { errors, isSubmitting }, setError: setFormError } = useForm({
+    const { register, handleSubmit, formState: { errors, isSubmitting, isValid }, setError: setFormError } = useForm({
         mode: 'onChange'
     });
     const [globalError, setGlobalError] = useState('');
@@ -85,7 +85,7 @@ const Login = () => {
                         {errors.password && <span className="form-error">{errors.password.message}</span>}
                     </div>
 
-                    <button type="submit" className="btn btn-primary btn-full" disabled={isSubmitting}>
+                    <button type="submit" className="btn btn-primary btn-full" disabled={isSubmitting || !isValid}>
                         <span>{isSubmitting ? 'Signing in...' : 'Sign In'}</span>
                         {isSubmitting && <span className="spinner"></span>}
                     </button>

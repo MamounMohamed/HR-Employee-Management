@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { API } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const DeleteConfirmationModal = ({ employee, onClose, onSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const { user } = useAuth();
+    const { addToast } = useToast();
 
     if (user && user.id === employee.id) {
         // This should technically be prevented by the UI logic before opening modal,
@@ -18,11 +20,14 @@ const DeleteConfirmationModal = ({ employee, onClose, onSuccess }) => {
         setError('');
         try {
             await API.deactivateEmployee(employee.id);
+            addToast('Employee deactivated successfully', 'success');
             onSuccess();
             onClose();
         } catch (err) {
             console.error(err);
-            setError(err.message || 'Failed to deactivate employee');
+            const msg = err.message || 'Failed to deactivate employee';
+            addToast(msg, 'error');
+            setError(msg);
             setLoading(false);
         }
     };
