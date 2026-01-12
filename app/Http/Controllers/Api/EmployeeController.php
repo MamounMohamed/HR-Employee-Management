@@ -5,19 +5,22 @@ namespace App\Http\Controllers\Api;
 use App\DTOs\EmployeeDTO;
 use App\DTOs\EmployeeListDTO;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Http\Requests\EmployeeListRequest;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Http\Resources\EmployeeCollection;
 use App\Http\Resources\EmployeeResource;
 use App\Services\EmployeeService;
+use App\Services\ResponseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
 class EmployeeController extends Controller
 {
     public function __construct(
-        private readonly EmployeeService $service
+        private readonly EmployeeService $service,
+        private readonly ResponseService $response
     ) {
     }
 
@@ -27,12 +30,12 @@ class EmployeeController extends Controller
      * @group Employee Management
      * @authenticated
      */
-    public function index(EmployeeListRequest $request): EmployeeCollection
+    public function index(EmployeeListRequest $request): JsonResponse
     {
         $dto = EmployeeListDTO::fromRequest($request->validated());
         $employees = $this->service->list($dto);
 
-        return new EmployeeCollection($employees);
+        return $this->response->success(new EmployeeCollection($employees));
     }
 
     /**
@@ -46,9 +49,7 @@ class EmployeeController extends Controller
         $dto = EmployeeDTO::fromRequest($request->validated());
         $employee = $this->service->create($dto);
 
-        return (new EmployeeResource($employee))
-            ->response()
-            ->setStatusCode(Response::HTTP_CREATED);
+        return $this->response->created(new EmployeeResource($employee));
     }
 
     /**
@@ -57,17 +58,9 @@ class EmployeeController extends Controller
      * @group Employee Management
      * @authenticated
      */
-    public function show(int $id): JsonResponse
+    public function show(User $employee): JsonResponse
     {
-        $employee = $this->service->findById($id);
-
-        if (!$employee) {
-            return response()->json([
-                'message' => 'Employee not found'
-            ], Response::HTTP_NOT_FOUND);
-        }
-
-        return (new EmployeeResource($employee))->response();
+        return $this->response->success(new EmployeeResource($employee));
     }
 
     /**
@@ -76,18 +69,16 @@ class EmployeeController extends Controller
      * @group Employee Management
      * @authenticated
      */
-    public function update(UpdateEmployeeRequest $request, int $id): JsonResponse
+    public function update(UpdateEmployeeRequest $request, User $employee): JsonResponse
     {
         $dto = EmployeeDTO::fromRequest($request->validated());
-        $employee = $this->service->update($dto, $id);
+        $updatedEmployee = $this->service->update($dto, $employee->id);
 
-        if (!$employee) {
-            return response()->json([
-                'message' => 'Employee not found or update failed'
-            ], Response::HTTP_NOT_FOUND);
+        if (!$updatedEmployee) {
+            return $this->response->notFound('Update failed');
         }
 
-        return (new EmployeeResource($employee))->response();
+        return $this->response->success(new EmployeeResource($updatedEmployee));
     }
 
     /**
@@ -96,16 +87,14 @@ class EmployeeController extends Controller
      * @group Employee Management
      * @authenticated
      */
-    public function deactivate(int $id, \App\Http\Requests\DeactivateEmployeeRequest $request): JsonResponse
+    public function deactivate(User $employee, \App\Http\Requests\DeactivateEmployeeRequest $request): JsonResponse
     {
-        $success = $this->service->deactivate($id);
+        $success = $this->service->deactivate($employee->id);
 
         if (!$success) {
-            return response()->json([
-                'message' => 'Employee not found or deactivation failed'
-            ], Response::HTTP_NOT_FOUND);
+            return $this->response->notFound('Deactivation failed');
         }
 
-        return response()->json(null, Response::HTTP_NO_CONTENT);
+        return $this->response->noContent();
     }
 }

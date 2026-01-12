@@ -26,28 +26,10 @@ export const API = {
             if (response.status === 401) {
                 localStorage.removeItem('auth_token');
                 localStorage.removeItem('user');
-                window.location.href = '/login'; // Or handle via context
+                window.location.href = '/login';
                 throw {
                     status: 401,
                     message: 'Your session has expired. Please login again.',
-                    errors: {},
-                };
-            }
-
-            // Handle 403 Forbidden
-            if (response.status === 403) {
-                throw {
-                    status: 403,
-                    message: 'Access denied. You do not have permission to perform this action.',
-                    errors: {},
-                };
-            }
-
-            // Handle 404 Not Found
-            if (response.status === 404) {
-                throw {
-                    status: 404,
-                    message: 'The requested resource was not found.',
                     errors: {},
                 };
             }

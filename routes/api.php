@@ -34,8 +34,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('employees')->group(function () {
         Route::get('/', [EmployeeController::class, 'index'])->name('employees.index');
         Route::post('/', [EmployeeController::class, 'store'])->name('employees.store');
-        Route::get('/{id}', [EmployeeController::class, 'show'])->name('employees.show');
-        Route::put('/{id}', [EmployeeController::class, 'update'])->name('employees.update');
-        Route::delete('/{id}/deactivate', [EmployeeController::class, 'deactivate'])->name('employees.deactivate');
+        Route::get('/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
+        Route::put('/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
+        Route::delete('/{employee}/deactivate', [EmployeeController::class, 'deactivate'])->name('employees.deactivate');
     });
 });

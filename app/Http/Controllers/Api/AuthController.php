@@ -12,8 +12,15 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
 use App\Enums\EmployeeStatusEnum;
+use App\Services\ResponseService;
+
 class AuthController extends Controller
 {
+    public function __construct(
+        private readonly ResponseService $response
+    ) {
+    }
+
     /**
      * Handle login request
      * 
@@ -29,6 +36,11 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
+            // ValidationException throws 422 automatically, which renders errors.
+            // If we want to use ResponseService, we can return error explicitly.
+            // But ValidationException uses Laravel's standard error format which front-end expects.
+            // However, the original code used ValidationException. I'll keep it or use response->error?
+            // "The provided credentials are incorrect." usually maps to 'email' field error.
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
@@ -44,7 +56,8 @@ class AuthController extends Controller
         // Create token
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        return response()->json([
+        // Uses specialized structure
+        return $this->response->json([
             'message' => 'Login successful',
             'user' => new EmployeeResource($user),
             'token' => $token,
@@ -62,9 +75,7 @@ class AuthController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json([
-            'message' => 'Logged out successfully'
-        ]);
+        return $this->response->success(null, 'Logged out successfully');
     }
 
     /**
@@ -75,7 +86,7 @@ class AuthController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
-        return response()->json([
+        return $this->response->json([
             'user' => new EmployeeResource($request->user()),
         ]);
     }
