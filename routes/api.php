@@ -1,0 +1,41 @@
+<?php
+
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\EmployeeController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "api" middleware group. Make something great!
+|
+*/
+
+// Authentication Routes (Public)
+Route::post('/auth/login', [AuthController::class, 'login'])->name('auth.login');
+
+// Protected Routes
+Route::middleware('auth:sanctum')->group(function () {
+    // Auth Routes
+    Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+    Route::get('/auth/me', [AuthController::class, 'me'])->name('auth.me');
+
+    // User endpoint
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+
+    // Employee Management Routes
+    Route::prefix('employees')->group(function () {
+        Route::get('/', [EmployeeController::class, 'index'])->name('employees.index');
+        Route::post('/', [EmployeeController::class, 'store'])->name('employees.store');
+        Route::get('/{id}', [EmployeeController::class, 'show'])->name('employees.show');
+        Route::put('/{id}', [EmployeeController::class, 'update'])->name('employees.update');
+        Route::delete('/{id}/deactivate', [EmployeeController::class, 'deactivate'])->name('employees.deactivate');
+    });
+});
