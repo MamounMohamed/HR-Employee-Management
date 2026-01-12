@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -28,8 +30,12 @@ return Application::configure(basePath: dirname(__DIR__))
                     return $response->notFound('Resource not found');
                 }
 
-                if ($e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException) {
+                if ($e instanceof NotFoundHttpException) {
                     return $response->notFound('Route Not Found');
+                }
+
+                if ($e instanceof \Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException) {
+                    return $response->error($e->getMessage() ?? 'Unauthorized Access', Response::HTTP_FORBIDDEN);
                 }
             }
         });

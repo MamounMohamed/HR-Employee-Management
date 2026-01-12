@@ -9,10 +9,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\UnauthorizedException;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
 use App\Enums\EmployeeStatusEnum;
 use App\Services\ResponseService;
+use Symfony\Component\HttpFoundation\Response;
 
 class AuthController extends Controller
 {
@@ -36,11 +38,6 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
-            // ValidationException throws 422 automatically, which renders errors.
-            // If we want to use ResponseService, we can return error explicitly.
-            // But ValidationException uses Laravel's standard error format which front-end expects.
-            // However, the original code used ValidationException. I'll keep it or use response->error?
-            // "The provided credentials are incorrect." usually maps to 'email' field error.
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
@@ -51,6 +48,11 @@ class AuthController extends Controller
             throw ValidationException::withMessages([
                 'email' => ['Your account has been deactivated. Please contact HR.'],
             ]);
+        }
+
+        // Check if user is HR
+        if ($user->role->value !== EmployeeRoleEnum::HR->value) {
+            throw new \Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException(challenge:'Bearer', message:'You do not have permission to login. Please contact HR.');
         }
 
         // Create token
