@@ -23,7 +23,7 @@ class UpdateEmployeeRequest extends FormRequest
      */
     public function rules(): array
     {
-        $employeeId = $this->route('id');
+        $employeeId = $this->route('employee');
 
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-\']+$/'],
