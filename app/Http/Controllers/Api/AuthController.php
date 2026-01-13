@@ -9,7 +9,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\UnauthorizedException;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
 use App\Enums\EmployeeStatusEnum;
@@ -52,7 +51,9 @@ class AuthController extends Controller
 
         // Check if user is HR
         if ($user->role->value !== EmployeeRoleEnum::HR->value) {
-            throw new \Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException(challenge:'Bearer', message:'You do not have permission to login. Please contact HR.');
+            throw ValidationException::withMessages([
+                'email' => ['You do not have permission to login. Only employees with the role HR can login to this system.'],
+            ])->status(Response::HTTP_FORBIDDEN);
         }
 
         // Create token

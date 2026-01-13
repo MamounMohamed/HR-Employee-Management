@@ -1,13 +1,16 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
     const { user, logout } = useAuth();
+    const { addToast } = useToast();
     const navigate = useNavigate();
 
     const handleLogout = async () => {
         await logout();
+        addToast('Successfully logged out. See you soon!', 'success');
         navigate('/login');
     };
 
