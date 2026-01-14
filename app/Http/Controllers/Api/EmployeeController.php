@@ -97,4 +97,21 @@ class EmployeeController extends Controller
 
         return $this->response->noContent();
     }
+
+    /**
+     * Reactivate (restore) the specified employee
+     * 
+     * @group Employee Management
+     * @authenticated
+     */
+    public function reactivate(User $employee): JsonResponse
+    {
+        $success = $this->service->reactivate($employee->id);
+
+        if (!$success) {
+            return $this->response->notFound('Reactivation failed Employee not found');
+        }
+
+        return $this->response->success(new EmployeeResource($employee->fresh()));
+    }
 }

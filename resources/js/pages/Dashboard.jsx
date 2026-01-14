@@ -4,9 +4,11 @@ import { API } from '../api';
 import { useAuth } from '../context/AuthContext';
 import EmployeeModal from '../components/EmployeeModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
+import { useToast } from '../context/ToastContext';
 
 const Dashboard = () => {
     const { user } = useAuth();
+    const { addToast } = useToast();
 
     // Active Employees State
     const [employees, setEmployees] = useState([]);
@@ -94,6 +96,16 @@ const Dashboard = () => {
     const handleCreate = () => {
         setSelectedEmployee(null);
         setShowModal(true);
+    };
+
+    const handleReactivate = async (employee) => {
+        try {
+            await API.reactivateEmployee(employee.id);
+            addToast(`${employee.name} has been reactivated successfully.`, 'success');
+            refreshData();
+        } catch (err) {
+            addToast(err.message || 'Failed to reactivate employee', 'error');
+        }
     };
 
     const Pagination = ({ meta, onPageChange }) => {
@@ -290,6 +302,7 @@ const Dashboard = () => {
                                                     <th>Department</th>
                                                     <th>Status</th>
                                                     <th>Joined</th>
+                                                    <th style={{ textAlign: 'right' }}>Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -313,6 +326,20 @@ const Dashboard = () => {
                                                             {new Date(emp.created_at).toLocaleDateString('en-US', {
                                                                 year: 'numeric', month: 'short', day: 'numeric'
                                                             })}
+                                                        </td>
+                                                        <td style={{ textAlign: 'right' }}>
+                                                            <div className="action-buttons">
+                                                                <button
+                                                                    className="btn-icon btn-edit"
+                                                                    title="Reactivate Employee"
+                                                                    onClick={() => handleReactivate(emp)}
+                                                                    style={{ color: 'var(--color-success-light)' }}
+                                                                >
+                                                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}

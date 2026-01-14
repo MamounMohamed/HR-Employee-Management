@@ -64,6 +64,32 @@ class EmployeeRepository
     }
 
     /**
+     * Restore (reactivate) a soft deleted employee
+     */
+    public function reactivate(int $id): bool
+    {
+        $employee = $this->findByIdWithTrashed($id);
+
+        if (!$employee) {
+            return false;
+        }
+
+        if ($employee->status !== 'inactive') {
+            return false;
+        }
+
+        // Restore the record
+        $restored = $employee->restore();
+
+        if ($restored) {
+            // Update status back to active
+            return $employee->update(['status' => 'active']);
+        }
+
+        return false;
+    }
+
+    /**
      * Paginate and search employees
      */
     public function paginateAndSearch(?string $search, int $perPage, bool $onlyTrashed = false): LengthAwarePaginator

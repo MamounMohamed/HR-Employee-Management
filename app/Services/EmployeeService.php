@@ -67,6 +67,14 @@ class EmployeeService
     }
 
     /**
+     * Reactivate (restore) an employee
+     */
+    public function reactivate(int $employeeId): bool
+    {
+        return $this->repository->reactivate($employeeId);
+    }
+
+    /**
      * Get paginated list of employees with optional search
      */
     public function list(EmployeeListDTO $dto): LengthAwarePaginator

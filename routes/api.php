@@ -37,5 +37,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
         Route::put('/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
         Route::delete('/{employee}/deactivate', [EmployeeController::class, 'deactivate'])->name('employees.deactivate');
+        Route::post('/{employee}/reactivate', [EmployeeController::class, 'reactivate'])->name('employees.reactivate')->withTrashed();
     });
 });

@@ -98,5 +98,11 @@ export const API = {
         return this.request(`/employees/${id}/deactivate`, {
             method: 'DELETE',
         });
+    },
+
+    async reactivateEmployee(id) {
+        return this.request(`/employees/${id}/reactivate`, {
+            method: 'POST',
+        });
     }
 };
