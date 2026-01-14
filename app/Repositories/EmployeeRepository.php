@@ -95,13 +95,8 @@ class EmployeeRepository
      */
     public function paginateAndSearch(?string $search, int $perPage, bool $onlyTrashed = false): LengthAwarePaginator
     {
-        $query = User::query();
-
-        if ($onlyTrashed) {
-            $query->onlyTrashed()->where('status', 'inactive');
-        }
-
-        return $query
+        return User::query()
+            ->when($onlyTrashed, fn($q) => $q->onlyTrashed()->where('status', 'inactive'))
             ->when($search, function (Builder $query, string $search) {
                 $query->where(function (Builder $q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -109,7 +104,11 @@ class EmployeeRepository
                         ->orWhere('department', 'like', "%{$search}%");
                 });
             })
-            ->orderBy('created_at', 'desc')
+            ->when(
+                $onlyTrashed,
+                fn($q) => $q->latest('deleted_at'),
+                fn($q) => $q->latest('created_at')
+            )
             ->paginate($perPage);
     }
 

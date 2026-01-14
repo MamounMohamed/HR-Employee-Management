@@ -302,6 +302,7 @@ const Dashboard = () => {
                                                     <th>Department</th>
                                                     <th>Status</th>
                                                     <th>Joined</th>
+                                                    <th>Deleted At</th>
                                                     <th style={{ textAlign: 'right' }}>Actions</th>
                                                 </tr>
                                             </thead>
@@ -326,6 +327,11 @@ const Dashboard = () => {
                                                             {new Date(emp.created_at).toLocaleDateString('en-US', {
                                                                 year: 'numeric', month: 'short', day: 'numeric'
                                                             })}
+                                                        </td>
+                                                        <td>
+                                                            {emp.deleted_at ? new Date(emp.deleted_at).toLocaleDateString('en-US', {
+                                                                year: 'numeric', month: 'short', day: 'numeric'
+                                                            }) : '—'}
                                                         </td>
                                                         <td style={{ textAlign: 'right' }}>
                                                             <div className="action-buttons">
