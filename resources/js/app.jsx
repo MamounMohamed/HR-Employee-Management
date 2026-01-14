@@ -6,6 +6,7 @@ import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import NotFound from './pages/NotFound';
 import '../css/app.css';
 import './bootstrap';
 
@@ -25,6 +26,7 @@ const App = () => {
                             }
                         />
                         <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="*" element={<NotFound />} />
                     </Routes>
                 </ToastProvider>
             </AuthProvider>
