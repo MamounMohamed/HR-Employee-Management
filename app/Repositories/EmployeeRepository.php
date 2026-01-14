@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Enums\EmployeeStatusEnum;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -74,7 +75,7 @@ class EmployeeRepository
             return false;
         }
 
-        if ($employee->status !== 'inactive') {
+        if ($employee->status->value !== EmployeeStatusEnum::INACTIVE->value) {
             return false;
         }
 
@@ -83,7 +84,7 @@ class EmployeeRepository
 
         if ($restored) {
             // Update status back to active
-            return $employee->update(['status' => 'active']);
+            return $employee->update(['status' => EmployeeStatusEnum::ACTIVE->value]);
         }
 
         return false;
