@@ -23,7 +23,7 @@ export const API = {
             }
 
             // Handle 401 Unauthorized
-            if (response.status === 401) {
+            if (response.status === 401 && window.location.pathname !== '/login') {
                 localStorage.removeItem('auth_token');
                 localStorage.removeItem('user');
                 window.location.href = '/login';

@@ -39,14 +39,14 @@ class AuthController extends Controller
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
-            ]);
+            ])->status(Response::HTTP_UNAUTHORIZED);
         }
 
         // Check if user is active
         if ($user->status->value !== EmployeeStatusEnum::ACTIVE->value) {
             throw ValidationException::withMessages([
                 'email' => ['Your account has been deactivated. Please contact HR.'],
-            ]);
+            ])->status(Response::HTTP_FORBIDDEN);
         }
 
         // Check if user is HR

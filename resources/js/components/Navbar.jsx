@@ -29,7 +29,7 @@ const Navbar = () => {
     return (
         <nav className="navbar">
             <div className="container navbar-content">
-                <a href="#/dashboard" className="navbar-brand">
+                <a href="/dashboard" className="navbar-brand">
                     <div className="navbar-logo">HR</div>
                     <span>HR Management</span>
                 </a>

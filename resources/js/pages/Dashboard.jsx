@@ -23,7 +23,6 @@ const Dashboard = () => {
     // Shared State
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [error, setError] = useState('');
 
     // Modals
     const [showModal, setShowModal] = useState(false);
@@ -49,8 +48,7 @@ const Dashboard = () => {
             setEmployees(response.data);
             setMeta(response.meta);
         } catch (err) {
-            console.error(err);
-            setError('Failed to load employees');
+            addToast(err.message || 'Failed to load employees', 'error');
         } finally {
             setLoading(false);
         }
@@ -64,7 +62,7 @@ const Dashboard = () => {
             setInactiveEmployees(response.data);
             setInactiveMeta(response.meta);
         } catch (err) {
-            console.error(err);
+            addToast(err.message || 'Failed to load inactive employees', 'error');
         } finally {
             setInactiveLoading(false);
         }

@@ -1,26 +1,27 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 
 const Login = () => {
     const { login, token } = useAuth();
+    const { addToast } = useToast();
     const navigate = useNavigate();
 
     // Setup form hook
     const { register, handleSubmit, formState: { errors, isSubmitting, isValid }, setError: setFormError } = useForm({
         mode: 'onChange'
     });
-    const [globalError, setGlobalError] = useState('');
 
     if (token) {
         return <Navigate to="/dashboard" replace />;
     }
 
     const onSubmit = async (data) => {
-        setGlobalError('');
         try {
             await login(data.email, data.password);
+            addToast('Successfully signed in! Welcome back.', 'success');
             navigate('/dashboard');
         } catch (err) {
             if (err.errors) {
@@ -31,8 +32,9 @@ const Login = () => {
                         message: err.errors[key][0]
                     });
                 });
+                addToast(err?.message || 'Please check the form for errors.', 'error');
             } else {
-                setGlobalError(err.message || 'Login failed. Please try again.');
+                addToast(err.message || 'Login failed. Please try again.', 'error');
             }
         }
     };
@@ -45,12 +47,6 @@ const Login = () => {
                     <h1 className="auth-title">Welcome Back</h1>
                     <p className="auth-subtitle">Sign in to access the HR Management System</p>
                 </div>
-
-                {globalError && (
-                    <div className="alert alert-error" style={{ marginBottom: '1.5rem' }}>
-                        {globalError}
-                    </div>
-                )}
 
                 <form onSubmit={handleSubmit(onSubmit)} noValidate>
                     <div className="form-group">

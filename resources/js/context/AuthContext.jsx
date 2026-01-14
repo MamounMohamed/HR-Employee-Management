@@ -17,30 +17,28 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = async (email, password) => {
-        const response = await API.login(email, password);
-
-        if (response.role !== 'hr') {
-            throw { message: 'Access denied. Only HR users can access this system.' };
-        }
-
-        localStorage.setItem('auth_token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        setToken(response.token);
-        setUser(response.user);
-        return response;
+        const response = await API.login(email, password).then((response) => {
+            localStorage.setItem('auth_token', response.token);
+            localStorage.setItem('user', JSON.stringify(response.user));
+            setToken(response.token);
+            setUser(response.user);
+            return response;
+        }).catch((error) => {
+            console.error('Login error', error);
+            throw error;
+        });
     };
 
     const logout = async () => {
-        try {
-            await API.logout();
-        } catch (error) {
-            console.error('Logout error', error);
-        } finally {
+        await API.logout().then(() => {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user');
             setToken(null);
             setUser(null);
-        }
+        }).catch((error) => {
+            console.error('Logout error', error);
+            throw error;
+        });
     };
 
     const isHR = () => {
