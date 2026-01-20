@@ -46,5 +46,6 @@ Route::middleware('auth:sanctum')
     ->prefix('work-log')
     ->group(function () {
         Route::post('/', [WorkLogController::class, 'store']);
+        Route::get('/laststatus', [WorkLogController::class, 'getLastStatus']);
         Route::get('/calculate', [WorkLogController::class, 'calculateWorkMinutes']);
     });

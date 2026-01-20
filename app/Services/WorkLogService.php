@@ -44,6 +44,11 @@ class WorkLogService
         return $results;
     }
 
+    public function getLastLog(int $userId): ?WorkLog
+    {
+        return WorkLog::where('user_id', $userId)->latest()->first();
+    }
+
     private function calculateDayWorkMinutes(string $date, $dayLogs): array
     {
         $totalMinutes = $this->calculateTotalMinutes($dayLogs);
