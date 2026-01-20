@@ -53,4 +53,8 @@ class User extends Authenticatable
             'status' => \App\Enums\EmployeeStatusEnum::class,
         ];
     }
+    public function workLogs()
+    {
+        return $this->hasMany(\App\Models\WorkLog::class);
+    }
 }
