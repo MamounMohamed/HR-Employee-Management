@@ -115,5 +115,13 @@ export const API = {
             method: 'POST',
             body: JSON.stringify({ status }),
         });
+    },
+
+    async getWorkReport(startDate, endDate, userId = null) {
+        let url = `/work-log/calculate?date=${startDate}&end_date=${endDate}`;
+        if (userId) {
+            url += `&user_id=${userId}`;
+        }
+        return this.request(url);
     }
 };

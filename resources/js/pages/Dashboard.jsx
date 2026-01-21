@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import EmployeeModal from '../components/EmployeeModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import WorkTimer from '../components/WorkTimer';
+import WorkReport from '../components/WorkReport';
 import { useToast } from '../context/ToastContext';
 
 const Dashboard = () => {
@@ -32,6 +33,9 @@ const Dashboard = () => {
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [employeeToDelete, setEmployeeToDelete] = useState(null);
+
+    // Work Report Toggle
+    const [showWorkReport, setShowWorkReport] = useState(false);
 
     // Debounce search
     useEffect(() => {
@@ -163,6 +167,20 @@ const Dashboard = () => {
                     <div className="container">
                         {/* Work Timer Section */}
                         <WorkTimer />
+
+                        {/* Work Report Toggle Button */}
+                        <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={() => setShowWorkReport(!showWorkReport)}
+                                style={{ minWidth: '200px' }}
+                            >
+                                {showWorkReport ? '📊 Hide Work Report' : '📊 View Work Report'}
+                            </button>
+                        </div>
+
+                        {/* Work Report Section */}
+                        {showWorkReport && <WorkReport />}
 
                         <div className="dashboard-header">
                             <h1 className="dashboard-title">Employee Management</h1>
