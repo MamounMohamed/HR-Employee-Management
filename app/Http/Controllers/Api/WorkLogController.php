@@ -10,23 +10,19 @@ use App\Services\WorkLogService;
 use App\Http\Resources\WorkLogResource;
 use App\Http\Resources\WorkLogCalculationResourceCollection;
 use App\Http\Requests\CalculateWorkLogRequest;
+use App\Services\ResponseService;
 
 class WorkLogController extends Controller
 {
-    public function __construct(private WorkLogService $service) {}
+    public function __construct(private WorkLogService $service, private readonly ResponseService $response) {}
 
     public function store(Request $request): JsonResponse
     {
         try {
             $log = $this->service->storeLog(Auth::id(), $request->status);
-            return response()->json([
-                'message' => 'Status recorded',
-                'data' => new WorkLogResource($log),
-            ], 201);
+            return $this->response->success(new WorkLogResource($log));
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => $e->getMessage()
-            ], 422);
+            return $this->response->error($e->getMessage());
         }
     }
 
@@ -37,9 +33,6 @@ class WorkLogController extends Controller
         $calc = $this->service->calculateWorkMinutes($targetUserId, $start, $end);
 
 
-        return response()->json([
-            'message' => 'Work minutes calculated successfully',
-            'data' => new WorkLogCalculationResourceCollection(collect($calc))
-        ]);
+        return $this->response->success(new WorkLogCalculationResourceCollection(collect($calc)));
     }
 }

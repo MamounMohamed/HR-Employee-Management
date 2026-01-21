@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\WorkLog;
 use App\Enums\WorkLogStatusEnum;
+use App\DTOs\WorkLogCalculationDTO;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -43,20 +44,19 @@ class WorkLogService
 
         return $results;
     }
-    private function calculateDayWorkMinutes(string $date, $dayLogs): array
+    private function calculateDayWorkMinutes(string $date, $dayLogs): WorkLogCalculationDTO
     {
         $totalMinutes = $this->calculateTotalMinutes($dayLogs);
         $lastStatus = $this->getLastLogStatus($dayLogs);
 
-
-        return [
-            'date' => $date,
-            'total_minutes' => $totalMinutes,
-            'last_status' => $lastStatus,
-            'last_status_time' => $dayLogs->last()->created_at,
-            'hours' => floor($totalMinutes / 60),
-            'minutes' => $totalMinutes % 60,
-        ];
+        return new WorkLogCalculationDTO(
+            date: $date,
+            total_minutes: $totalMinutes,
+            last_status: $lastStatus,
+            last_status_time: $dayLogs->last()->created_at,
+            hours: floor($totalMinutes / 60),
+            minutes: $totalMinutes % 60
+        );
     }
     private function getLastLogStatus($dayLogs): ?string
     {
@@ -75,10 +75,10 @@ class WorkLogService
         $currentStart = null;
 
         foreach ($dayLogs as $log) {
-            if ($this->isStartLog($log)) {
+            if ($log->status->isStart()) {
                 $currentStart = $this->handleStartLog($currentStart, $log);
             }
-            if ($this->isEndLog($log) && $currentStart !== null) {
+            if ($log->status->isEnd() && $currentStart !== null) {
                 $minutes = $this->calculateSessionMinutes($currentStart, $log);
                 $totalMinutes += $minutes;
                 $currentStart = null;
@@ -88,16 +88,6 @@ class WorkLogService
         $this->handleUnmatchedStart($currentStart);
 
         return $totalMinutes;
-    }
-
-    private function isStartLog($log): bool
-    {
-        return $log->status === WorkLogStatusEnum::START;
-    }
-
-    private function isEndLog($log): bool
-    {
-        return $log->status === WorkLogStatusEnum::END;
     }
 
     private function handleStartLog($currentStart, $log): ?Carbon
