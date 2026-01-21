@@ -85,8 +85,6 @@ class WorkLogService
             }
         }
 
-        $this->handleUnmatchedStart($currentStart);
-
         return $totalMinutes;
     }
 
@@ -102,12 +100,5 @@ class WorkLogService
     {
         $endTime = Carbon::parse($endLog->created_at);
         return $startTime->diffInMinutes($endTime);
-    }
-
-    private function handleUnmatchedStart(?Carbon $currentStart): void
-    {
-        if ($currentStart !== null) {
-            Log::warning('Unmatched START at ' . $currentStart);
-        }
     }
 }
