@@ -43,23 +43,30 @@ class WorkLogService
 
         return $results;
     }
-
-    public function getLastLog(int $userId): ?WorkLog
-    {
-        return WorkLog::where('user_id', $userId)->latest()->first();
-    }
-
     private function calculateDayWorkMinutes(string $date, $dayLogs): array
     {
         $totalMinutes = $this->calculateTotalMinutes($dayLogs);
+        $lastStatus = $this->getLastLogStatus($dayLogs);
+
 
         return [
             'date' => $date,
             'total_minutes' => $totalMinutes,
+            'last_status' => $lastStatus,
             'hours' => floor($totalMinutes / 60),
             'minutes' => $totalMinutes % 60,
         ];
     }
+    private function getLastLogStatus($dayLogs): ?string
+    {
+        if ($dayLogs->isEmpty()) {
+            return null;
+        }
+
+        $lastLog = $dayLogs->last();
+        return $lastLog->status->value;
+    }
+
 
     private function calculateTotalMinutes($dayLogs): int
     {

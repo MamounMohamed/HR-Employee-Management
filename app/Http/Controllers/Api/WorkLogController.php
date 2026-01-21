@@ -42,19 +42,4 @@ class WorkLogController extends Controller
             'data' => new WorkLogCalculationResourceCollection(collect($calc))
         ]);
     }
-
-    public function getLastStatus(): JsonResponse
-    {
-        try {
-            $lastLog = $this->service->getLastLog(Auth::id());
-            return response()->json([
-                'message' => 'Last status retrieved successfully',
-                'data' => new WorkLogResource($lastLog),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => $e->getMessage()
-            ], 422);
-        }
-    }
 }
