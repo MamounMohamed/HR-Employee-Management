@@ -53,6 +53,7 @@ class WorkLogService
             'date' => $date,
             'total_minutes' => $totalMinutes,
             'last_status' => $lastStatus,
+            'last_status_time' => $dayLogs->last()->created_at,
             'hours' => floor($totalMinutes / 60),
             'minutes' => $totalMinutes % 60,
         ];
