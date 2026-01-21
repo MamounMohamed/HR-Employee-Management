@@ -154,14 +154,6 @@ const WorkTimer = () => {
                     >
                         {actionLoading ? 'Pausing...' : 'Pause'}
                     </button>
-                    <button 
-                        className="btn btn-primary" 
-                        onClick={handleEnd}
-                        disabled={actionLoading}
-                        style={{ minWidth: '120px' }}
-                    >
-                        {actionLoading ? 'Ending...' : 'End'}
-                    </button>
                 </div>
             );
         }
