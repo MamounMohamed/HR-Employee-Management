@@ -65,20 +65,6 @@ const WorkTimer = () => {
                 const minutes = totalMinutes % 60;
                 const seconds = Math.floor((elapsedMs % 60000) / 1000);
                 
-                // Check if we've reached 23:59:59 (1439 minutes and 59 seconds)
-                if (hours >= 23 && minutes >= 59 && seconds >= 59) {
-                    setDisplayTime('23:59:59');
-                    // Auto-end the work session
-                    try {
-                        await API.updateWorkStatus('end');
-                        addToast('Work session automatically ended after reaching 24-hour limit', 'info');
-                        await fetchWorkLog();
-                    } catch (err) {
-                        addToast(err.message || 'Failed to auto-end work session', 'error');
-                    }
-                    return;
-                }
-                
                 setDisplayTime(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
             }
         };
