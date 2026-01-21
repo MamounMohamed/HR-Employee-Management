@@ -4,6 +4,7 @@ import { API } from '../api';
 import { useAuth } from '../context/AuthContext';
 import EmployeeModal from '../components/EmployeeModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
+import WorkTimer from '../components/WorkTimer';
 import { useToast } from '../context/ToastContext';
 
 const Dashboard = () => {
@@ -160,6 +161,9 @@ const Dashboard = () => {
             <div className="page-wrapper">
                 <div className="dashboard">
                     <div className="container">
+                        {/* Work Timer Section */}
+                        <WorkTimer />
+
                         <div className="dashboard-header">
                             <h1 className="dashboard-title">Employee Management</h1>
                             <p className="dashboard-subtitle">Manage and view all employees in the system</p>

@@ -104,5 +104,16 @@ export const API = {
         return this.request(`/employees/${id}/reactivate`, {
             method: 'POST',
         });
+    },
+
+    async getWorkLog(date) {
+        return this.request(`/work-log/calculate?date=${date}`);
+    },
+
+    async updateWorkStatus(status) {
+        return this.request('/work-log', {
+            method: 'POST',
+            body: JSON.stringify({ status }),
+        });
     }
 };
