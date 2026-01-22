@@ -10,24 +10,15 @@ use Illuminate\Support\Facades\Log;
 
 class AutoEndWorkSessions extends Command
 {
+    protected $signature = 'work-log:auto-end';
+
+    protected $description = 'Automatically end work sessions';
+
     public function handle(WorkLogService $workLogService)
     {
         $this->info('Starting auto-end check...');
-
-        $users = User::whereHas('workLogs')->get();
-        $count = 0;
-
-        foreach ($users as $user) {
-            $lastLog = $user->workLogs()->latest()->first();
-
-            if ($lastLog && $lastLog->status->isStart()) {
-                $workLogService->storeLog($user->id, WorkLogStatusEnum::END->value);
-                $this->info("Ended session for user: {$user->name} (ID: {$user->id})");
-                Log::info("Auto-ended work session for user ID: {$user->id}");
-                $count++;
-            }
-        }
-
+        $count = $workLogService->autoEndRunningSessions();
         $this->info("Completed. Auto-ended {$count} sessions.");
+        Log::info("Auto-ended {$count} work sessions.");
     }
 }

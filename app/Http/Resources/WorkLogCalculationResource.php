@@ -11,9 +11,9 @@ class WorkLogCalculationResource extends JsonResource
     {
         return [
             'date' => $this->date,
-            'total_minutes' => $this->total_minutes,
-            'last_status' => $this->last_status ?? null,
-            'last_status_time' => $this->last_status_time ?? null,
+            'total_minutes' => $this->totalMinutes,
+            'last_status' => $this->lastStatus ?? null,
+            'last_status_time' => $this->lastStatusTime ?? null,
             'hours' => $this->hours,
             'minutes' => $this->minutes,
         ];

@@ -8,9 +8,9 @@ readonly class WorkLogCalculationDTO
 {
     public function __construct(
         public string $date,
-        public int $total_minutes,
-        public ?string $last_status,
-        public ?Carbon $last_status_time,
+        public int $totalMinutes,
+        public ?string $lastStatus,
+        public ?Carbon $lastStatusTime,
         public float $hours,
         public int $minutes
     ) {}
@@ -19,9 +19,9 @@ readonly class WorkLogCalculationDTO
     {
         return [
             'date' => $this->date,
-            'total_minutes' => $this->total_minutes,
-            'last_status' => $this->last_status,
-            'last_status_time' => $this->last_status_time,
+            'totalMinutes' => $this->totalMinutes,
+            'lastStatus' => $this->lastStatus,
+            'lastStatusTime' => $this->lastStatusTime,
             'hours' => $this->hours,
             'minutes' => $this->minutes,
         ];

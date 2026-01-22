@@ -7,6 +7,7 @@ import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import WorkTimer from '../components/WorkTimer';
 import WorkReport from '../components/WorkReport';
 import { useToast } from '../context/ToastContext';
+import { UserRoleEnum } from '../enums/UserRoleEnum';
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -251,7 +252,7 @@ const Dashboard = () => {
                                                     </td>
                                                     <td>{emp.email}</td>
                                                     <td>
-                                                        {emp.role === 'hr' ? (
+                                                        {emp.role === UserRoleEnum.HR ? (
                                                             <span className="badge badge-primary">HR</span>
                                                         ) : (
                                                             <span className="badge badge-secondary">Employee</span>
@@ -341,7 +342,7 @@ const Dashboard = () => {
                                                         </td>
                                                         <td>{emp.email}</td>
                                                         <td>
-                                                            {emp.role === 'hr' ? <span className="badge badge-primary">HR</span> : <span className="badge badge-secondary">Employee</span>}
+                                                            {emp.role === UserRoleEnum.HR ? <span className="badge badge-primary">HR</span> : <span className="badge badge-secondary">Employee</span>}
                                                         </td>
                                                         <td>{emp.department || '—'}</td>
                                                         <td><span className="badge badge-secondary" style={{ opacity: 0.6 }}>Inactive</span></td>

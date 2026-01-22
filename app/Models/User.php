@@ -57,4 +57,8 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\WorkLog::class);
     }
+    public function latestWorkLog()
+    {
+        return $this->hasOne(WorkLog::class)->latestOfMany();
+    }
 }

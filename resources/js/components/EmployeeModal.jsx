@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { API } from '../api';
 import { useToast } from '../context/ToastContext';
+import { UserRoleEnum } from '../enums/UserRoleEnum';
 
 const EmployeeModal = ({ employee, onClose, onSuccess }) => {
     const isEdit = !!employee;
@@ -223,8 +224,8 @@ const EmployeeModal = ({ employee, onClose, onSuccess }) => {
                                     {...register("role", { required: "Please select a role" })}
                                 >
                                     <option value="">Select Role</option>
-                                    <option value="hr">HR</option>
-                                    <option value="employee">Employee</option>
+                                    <option value={UserRoleEnum.HR}>HR</option>
+                                    <option value={UserRoleEnum.EMPLOYEE}>Employee</option>
                                 </select>
                                 {errors.role && <span className="form-error">{errors.role.message}</span>}
                             </div>

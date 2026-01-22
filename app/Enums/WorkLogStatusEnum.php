@@ -4,16 +4,16 @@ namespace App\Enums;
 
 enum WorkLogStatusEnum: string
 {
-    case START = 'start';
-    case END   = 'end';
+    case RUNNING = 'running';
+    case STOPPED = 'stopped';
 
-    public function isStart(): bool
+    public function isRunning(): bool
     {
-        return $this === self::START;
+        return $this === self::RUNNING;
     }
 
-    public function isEnd(): bool
+    public function isStopped(): bool
     {
-        return $this === self::END;
+        return $this === self::STOPPED;
     }
 }

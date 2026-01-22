@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { API } from '../api';
 import { useToast } from '../context/ToastContext';
+import { WorkLogStatusEnum } from '../enums/WorkLogStatusEnum';
 
 const WorkTimer = () => {
     const { addToast } = useToast();
@@ -48,12 +49,12 @@ const WorkTimer = () => {
 
             const { total_minutes, last_status, last_status_time } = workLog;
 
-            if (last_status === 'end') {
+            if (last_status === WorkLogStatusEnum.STOPPED) {
                 // Case 2: Paused/Ended - show static time
                 const hours = Math.floor(total_minutes / 60);
                 const minutes = total_minutes % 60;
                 setDisplayTime(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`);
-            } else if (last_status === 'start') {
+            } else if (last_status === WorkLogStatusEnum.RUNNING) {
                 // Case 3: Active - calculate live time
                 const now = new Date();
                 const lastStatusDate = new Date(last_status_time);
@@ -72,7 +73,7 @@ const WorkTimer = () => {
         updateDisplayTime();
 
         // Update every second if actively working
-        if (workLog && workLog.last_status === 'start') {
+        if (workLog && workLog.last_status === WorkLogStatusEnum.RUNNING) {
             interval = setInterval(updateDisplayTime, 1000);
         }
 
@@ -86,7 +87,7 @@ const WorkTimer = () => {
         setActionLoading(true);
         try {
             await API.updateWorkStatus(status);
-            addToast(`Work ${status === 'start' ? 'started' : 'ended'} successfully`, 'success');
+            addToast(`Work ${status === WorkLogStatusEnum.RUNNING ? 'started' : 'ended'} successfully`, 'success');
             await fetchWorkLog();
         } catch (err) {
             addToast(err.message || 'Failed to update work status', 'error');
@@ -95,8 +96,8 @@ const WorkTimer = () => {
         }
     };
 
-    const handleStart = () => handleStatusUpdate('start');
-    const handleEnd = () => handleStatusUpdate('end');
+    const handleStart = () => handleStatusUpdate(WorkLogStatusEnum.RUNNING);
+    const handleEnd = () => handleStatusUpdate(WorkLogStatusEnum.STOPPED);
 
     // Determine which buttons to show
     const getButtons = () => {
@@ -114,7 +115,7 @@ const WorkTimer = () => {
             );
         }
 
-        if (workLog.last_status === 'end') {
+        if (workLog.last_status === WorkLogStatusEnum.STOPPED) {
             // Case 2: Paused/Ended
             return (
                 <button 
@@ -128,7 +129,7 @@ const WorkTimer = () => {
             );
         }
 
-        if (workLog.last_status === 'start') {
+        if (workLog.last_status === WorkLogStatusEnum.RUNNING) {
             // Case 3: Active
             return (
                 <div style={{ display: 'flex', gap: '0.75rem' }}>

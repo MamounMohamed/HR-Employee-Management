@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { API } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { WorkLogStatusEnum } from '../enums/WorkLogStatusEnum';
+import { UserRoleEnum } from '../enums/UserRoleEnum';
 
 const WorkReport = () => {
     const { user } = useAuth();
@@ -31,7 +33,7 @@ const WorkReport = () => {
 
     // Load employees list for HR users (fetch all pages)
     useEffect(() => {
-        if (user && user.role === 'hr') {
+        if (user && user.role === UserRoleEnum.HR) {
             const loadAllEmployees = async () => {
                 setEmployeesLoading(true);
                 try {
@@ -68,7 +70,7 @@ const WorkReport = () => {
     const fetchReport = useCallback(async () => {
         setLoading(true);
         try {
-            const userId = user.role === 'hr' ? selectedUserId : null;
+            const userId = user.role === UserRoleEnum.HR ? selectedUserId : null;
             const response = await API.getWorkReport(startDate, endDate, userId);
             setReportData(response.data);
         } catch (err) {
@@ -178,7 +180,7 @@ const WorkReport = () => {
                 {/* Filters */}
                 <div style={{ 
                     display: 'grid', 
-                    gridTemplateColumns: user?.role === 'hr' ? 'repeat(auto-fit, minmax(200px, 1fr))' : 'repeat(2, 1fr)',
+                    gridTemplateColumns: user?.role === UserRoleEnum.HR ? 'repeat(auto-fit, minmax(200px, 1fr))' : 'repeat(2, 1fr)',
                     gap: '1rem', 
                     marginBottom: '1.5rem',
                     maxWidth: '800px'
@@ -213,7 +215,7 @@ const WorkReport = () => {
                     </div>
 
 
-                    {user?.role === 'hr' && (
+                    {user?.role === UserRoleEnum.HR && (
                         <div style={{ position: 'relative' }} className="employee-search-container">
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
                                 Employee
@@ -380,7 +382,7 @@ const WorkReport = () => {
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    {log.last_status === 'start' ? (
+                                                    {log.last_status === WorkLogStatusEnum.RUNNING ? (
                                                         <span className="badge badge-success">
                                                             <span className="badge-dot"></span>Active
                                                         </span>
