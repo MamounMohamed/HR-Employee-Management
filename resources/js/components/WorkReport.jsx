@@ -30,6 +30,8 @@ const WorkReport = () => {
     const [reportData, setReportData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [employeesLoading, setEmployeesLoading] = useState(false);
+    const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(15);
 
     // Load employees list for HR users (fetch all pages)
     useEffect(() => {
@@ -71,7 +73,7 @@ const WorkReport = () => {
         setLoading(true);
         try {
             const userId = user.role === UserRoleEnum.HR ? selectedUserId : null;
-            const response = await API.getWorkReport(startDate, endDate, userId);
+            const response = await API.getWorkReport(startDate, endDate, userId, page, perPage);
             setReportData(response.data);
         } catch (err) {
             addToast(err.message || 'Failed to load work report', 'error');
@@ -79,7 +81,7 @@ const WorkReport = () => {
         } finally {
             setLoading(false);
         }
-    }, [startDate, endDate, selectedUserId, user, addToast]);
+    }, [startDate, endDate, selectedUserId, user, addToast, page, perPage]);
 
     // Load report on mount
     useEffect(() => {
@@ -419,6 +421,73 @@ const WorkReport = () => {
                                         </tr>
                                     </tfoot>
                                 </table>
+
+                                {/* Pagination Controls */}
+                                <div style={{ 
+                                    marginTop: '1.5rem', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'space-between',
+                                    gap: '1rem',
+                                    flexWrap: 'wrap'
+                                }}>
+                                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                                        Showing {workLogs.length} of results per page
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <select 
+                                            value={perPage}
+                                            onChange={(e) => {
+                                                setPerPage(Number(e.target.value));
+                                                setPage(1);
+                                            }}
+                                            className="search-input"
+                                            style={{ padding: '0.5rem 1rem', minWidth: '100px' }}
+                                        >
+                                            <option value={5}>5</option>
+                                            <option value={10}>10</option>
+                                            <option value={15}>15</option>
+                                            <option value={30}>30</option>
+                                            <option value={50}>50</option>
+                                        </select>
+
+                                        <button 
+                                            onClick={() => setPage(Math.max(1, page - 1))}
+                                            disabled={page === 1}
+                                            className="btn btn-secondary"
+                                            style={{ padding: '0.5rem 0.75rem', minWidth: '44px' }}
+                                            title="Previous page"
+                                        >
+                                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
+                                            </svg>
+                                        </button>
+
+                                        <span style={{ 
+                                            padding: '0.5rem 1rem',
+                                            background: 'var(--color-surface)',
+                                            borderRadius: '6px',
+                                            fontSize: '0.875rem',
+                                            fontWeight: '500',
+                                            color: 'var(--color-text-primary)'
+                                        }}>
+                                        {page}
+                                        </span>
+
+                                        <button 
+                                            onClick={() => setPage(page + 1)}
+                                            disabled={workLogs.length < perPage}
+                                            className="btn btn-secondary"
+                                            style={{ padding: '0.5rem 0.75rem', minWidth: '44px' }}
+                                            title="Next page"
+                                        >
+                                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
                             </>
                         )}
                     </>

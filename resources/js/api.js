@@ -117,8 +117,8 @@ export const API = {
         });
     },
 
-    async getWorkReport(startDate, endDate, userId = null) {
-        let url = `/work-log/calculate?date=${startDate}&end_date=${endDate}`;
+    async getWorkReport(startDate, endDate, userId = null, page = 1, perPage = 15) {
+        let url = `/work-log/calculate?date=${startDate}&end_date=${endDate}&page=${page}&per_page=${perPage}`;
         if (userId) {
             url += `&user_id=${userId}`;
         }
