@@ -25,4 +25,9 @@ enum EmployeeRoleEnum: string
             self::EMPLOYEE => 'Employee',
         };
     }
+
+    public function isHr(): bool
+    {
+        return $this === EmployeeRoleEnum::HR;
+    }
 }

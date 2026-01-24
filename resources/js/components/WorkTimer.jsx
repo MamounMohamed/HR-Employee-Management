@@ -1,35 +1,71 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { API } from '../api';
 import { useToast } from '../context/ToastContext';
+import { useWorkLog } from '../context/WorkLogContext';
 import { WorkLogStatusEnum } from '../enums/WorkLogStatusEnum';
 
 const WorkTimer = () => {
     const { addToast } = useToast();
+    const { updateWorkLog, triggerRefresh } = useWorkLog();
     const [workLog, setWorkLog] = useState(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [displayTime, setDisplayTime] = useState('00:00:00');
+    
+    // Client-side state for tracking running timer
+    const localStartTimeRef = useRef(null);
+    const localTotalMinutesRef = useRef(0);
+    const timerIntervalRef = useRef(null);
 
-    // Get today's date in YYYY-MM-DD format
-    const getTodayDate = () => {
-        const now = new Date();
-        return now.toISOString().split('T')[0];
-    };
+    // Initialize local state from sessionStorage or worklog
+    const initializeLocalState = useCallback((workLogData) => {
+        if (!workLogData || workLogData.last_status === null) {
+            // Not started - reset local state
+            localStartTimeRef.current = null;
+            localTotalMinutesRef.current = 0;
+            sessionStorage.removeItem('worklog_start_time');
+            sessionStorage.removeItem('worklog_total_minutes');
+        } else if (workLogData.last_status === WorkLogStatusEnum.STOPPED) {
+            // Stopped - store total minutes and clear start time
+            localStartTimeRef.current = null;
+            localTotalMinutesRef.current = workLogData.total_minutes;
+            sessionStorage.removeItem('worklog_start_time');
+            sessionStorage.setItem('worklog_total_minutes', workLogData.total_minutes.toString());
+        } else if (workLogData.last_status === WorkLogStatusEnum.RUNNING) {
+            // Running - restore from sessionStorage if available, otherwise use server time
+            const storedStartTime = sessionStorage.getItem('worklog_start_time');
+            const storedTotalMinutes = sessionStorage.getItem('worklog_total_minutes');
+            
+            if (storedStartTime) {
+                // Use previously stored start time (user never left or came back)
+                localStartTimeRef.current = new Date(storedStartTime);
+                localTotalMinutesRef.current = parseInt(storedTotalMinutes || workLogData.total_minutes);
+            } else {
+                // First time resuming or page reload - use server time
+                localStartTimeRef.current = new Date(workLogData.last_status_time);
+                localTotalMinutesRef.current = workLogData.total_minutes;
+            }
+            
+            // Always update sessionStorage with current state
+            sessionStorage.setItem('worklog_start_time', localStartTimeRef.current.toISOString());
+            sessionStorage.setItem('worklog_total_minutes', localTotalMinutesRef.current.toString());
+        }
+    }, []);
 
     // Fetch work log data
     const fetchWorkLog = useCallback(async () => {
         setLoading(true);
         try {
-            const today = getTodayDate();
-            const response = await API.getWorkLog(today);
-            const todayLog = response.data.work_logs[today] || null;
-            setWorkLog(todayLog);
+            const response = await API.getWorkLog();
+            setWorkLog(response.data);
+            updateWorkLog(response.data);
+            initializeLocalState(response.data);
         } catch (err) {
             addToast(err.message || 'Failed to load work log', 'error');
         } finally {
             setLoading(false);
         }
-    }, [addToast]);
+    }, [addToast, updateWorkLog, initializeLocalState]);
 
     // Load work log on mount
     useEffect(() => {
@@ -38,35 +74,34 @@ const WorkTimer = () => {
 
     // Calculate and update display time
     useEffect(() => {
-        let interval;
-
-        const updateDisplayTime = async () => {
-            if (!workLog) {
+        const updateDisplayTime = () => {
+            if (!workLog || workLog.last_status === null) {
                 // Case 1: Not started
                 setDisplayTime('00:00:00');
                 return;
             }
 
-            const { total_minutes, last_status, last_status_time } = workLog;
-
-            if (last_status === WorkLogStatusEnum.STOPPED) {
+            if (workLog.last_status === WorkLogStatusEnum.STOPPED) {
                 // Case 2: Paused/Ended - show static time
-                const hours = Math.floor(total_minutes / 60);
-                const minutes = total_minutes % 60;
+                const hours = Math.floor(localTotalMinutesRef.current / 60);
+                const minutes = localTotalMinutesRef.current % 60;
                 setDisplayTime(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`);
-            } else if (last_status === WorkLogStatusEnum.RUNNING) {
-                // Case 3: Active - calculate live time
-                const now = new Date();
-                const lastStatusDate = new Date(last_status_time);
-                const elapsedMs = now - lastStatusDate;
-                const elapsedMinutes = Math.floor(elapsedMs / 60000);
-                const totalMinutes = total_minutes + elapsedMinutes;
-                
-                const hours = Math.floor(totalMinutes / 60);
-                const minutes = totalMinutes % 60;
-                const seconds = Math.floor((elapsedMs % 60000) / 1000);
-                
-                setDisplayTime(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+            } else if (workLog.last_status === WorkLogStatusEnum.RUNNING) {
+                // Case 3: Active - calculate live time from local start time
+                if (localStartTimeRef.current) {
+                    const now = new Date();
+                    const elapsedMs = now - localStartTimeRef.current;
+                    const safeElapsedMs = Math.max(0, elapsedMs);
+                    
+                    const elapsedMinutes = Math.floor(safeElapsedMs / 60000);
+                    const totalMinutesWithCurrent = localTotalMinutesRef.current + elapsedMinutes;
+                    
+                    const hours = Math.floor(totalMinutesWithCurrent / 60);
+                    const minutes = totalMinutesWithCurrent % 60;
+                    const seconds = Math.floor((safeElapsedMs % 60000) / 1000);
+                    
+                    setDisplayTime(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+                }
             }
         };
 
@@ -74,23 +109,63 @@ const WorkTimer = () => {
 
         // Update every second if actively working
         if (workLog && workLog.last_status === WorkLogStatusEnum.RUNNING) {
-            interval = setInterval(updateDisplayTime, 1000);
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = setInterval(updateDisplayTime, 1000);
         }
 
         return () => {
-            if (interval) clearInterval(interval);
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         };
-    }, [workLog, addToast, fetchWorkLog]);
+    }, [workLog]);
 
-    // Handle status updates
+    // Handle status updates with optimistic UI updates
     const handleStatusUpdate = async (status) => {
         setActionLoading(true);
+        
+        // Calculate what the new state should be
+        const newTotalMinutes = status === WorkLogStatusEnum.RUNNING && workLog?.last_status === WorkLogStatusEnum.STOPPED
+            ? localTotalMinutesRef.current
+            : localTotalMinutesRef.current;
+        
         try {
-            await API.updateWorkStatus(status);
+            // Make the API call
+            const response = await API.updateWorkStatus(status);
+            
+            // Update local state optimistically
+            if (status === WorkLogStatusEnum.RUNNING) {
+                // Starting/Resuming - set the local start time to now
+                const now = new Date();
+                localStartTimeRef.current = now;
+                sessionStorage.setItem('worklog_start_time', now.toISOString());
+                sessionStorage.setItem('worklog_total_minutes', newTotalMinutes.toString());
+            } else if (status === WorkLogStatusEnum.STOPPED) {
+                // Stopping/Pausing - calculate elapsed time and add to total
+                if (localStartTimeRef.current) {
+                    const elapsedMinutes = Math.floor((Date.now() - localStartTimeRef.current) / 60000);
+                    localTotalMinutesRef.current += elapsedMinutes;
+                    sessionStorage.setItem('worklog_total_minutes', localTotalMinutesRef.current.toString());
+                }
+                localStartTimeRef.current = null;
+                sessionStorage.removeItem('worklog_start_time');
+            }
+            
+            // Update the workLog state
+            const updatedWorkLog = { ...workLog, last_status: status };
+            setWorkLog(updatedWorkLog);
+            updateWorkLog(updatedWorkLog);
+            
             addToast(`Work ${status === WorkLogStatusEnum.RUNNING ? 'started' : 'ended'} successfully`, 'success');
-            await fetchWorkLog();
+            
+            // Fetch fresh data in the background (but don't wait for it)
+            fetchWorkLog();
+            triggerRefresh();
         } catch (err) {
             addToast(err.message || 'Failed to update work status', 'error');
+            // Revert local state on error
+            if (status === WorkLogStatusEnum.RUNNING) {
+                localStartTimeRef.current = null;
+                sessionStorage.removeItem('worklog_start_time');
+            }
         } finally {
             setActionLoading(false);
         }
@@ -101,7 +176,7 @@ const WorkTimer = () => {
 
     // Determine which buttons to show
     const getButtons = () => {
-        if (!workLog || (Array.isArray(workLog) && workLog.length === 0)) {
+        if (!workLog || (Array.isArray(workLog) && workLog.length === 0) || workLog.last_status === null) {
             // Case 1: Not started
             return (
                 <button 

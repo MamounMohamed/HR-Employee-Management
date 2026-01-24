@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { API } from '../api';
 import { useToast } from '../context/ToastContext';
+import { useWorkLog } from '../context/WorkLogContext';
 import { WorkLogStatusEnum } from '../enums/WorkLogStatusEnum';
 
 const WorkReportSummary = () => {
     const { addToast } = useToast();
+    const { currentWorkLog: contextWorkLog, refreshTrigger } = useWorkLog();
     const [reportData, setReportData] = useState(null);
+    const [currentWorkLog, setCurrentWorkLog] = useState(null);
     const [loading, setLoading] = useState(false);
 
     // Get date 6 days ago as start date
@@ -19,7 +22,18 @@ const WorkReportSummary = () => {
         return new Date().toISOString().split('T')[0];
     };
 
-    // Fetch report data for last 7 days (today + 6 days before)
+    // Fetch current work log status
+    const fetchCurrentWorkLog = useCallback(async () => {
+        try {
+            const response = await API.getWorkLog();
+            setCurrentWorkLog(response.data);
+        } catch (err) {
+            // Silently fail - this is a background update
+            console.error('Failed to fetch current work log:', err);
+        }
+    }, []);
+
+    // Fetch report data for  (today + 6 days before)
     const fetchReport = useCallback(async () => {
         setLoading(true);
         try {
@@ -37,7 +51,15 @@ const WorkReportSummary = () => {
 
     useEffect(() => {
         fetchReport();
-    }, [fetchReport]);
+        fetchCurrentWorkLog();
+    }, [fetchReport, fetchCurrentWorkLog]);
+
+    // Listen for work log updates from context
+    useEffect(() => {
+        if (contextWorkLog) {
+            setCurrentWorkLog(contextWorkLog);
+        }
+    }, [contextWorkLog, refreshTrigger]);
 
     // Format time as HH:MM
     const formatTime = (hours, minutes) => {
@@ -67,14 +89,32 @@ const WorkReportSummary = () => {
         });
     };
 
-    const workLogs = reportData?.work_logs 
-        ? Object.entries(reportData.work_logs)
-            .sort((a, b) => b[0].localeCompare(a[0]))
-            .slice(0, 7) // Last 7 days
+    const workLogs = Array.isArray(reportData)
+        ? reportData
+            .sort((a, b) => b.work_date.localeCompare(a.work_date))
+            .slice(0, 7) // 
         : [];
 
+    // Function to get status for a work log
+    const getStatusBadge = (log) => {
+        const today = getTodayDate();
+        const isToday = log.work_date === today;
+        
+        // If it's today and work is running, show "Active" in green
+        if (isToday && currentWorkLog && currentWorkLog.last_status === WorkLogStatusEnum.RUNNING) {
+            return (
+                <span className="badge" style={{ backgroundColor: '#10b981', color: 'white' }}>
+                    Active
+                </span>
+            );
+        }
+        
+        // Otherwise show "Ended"
+        return <span className="badge badge-secondary">Ended</span>;
+    };
+
     // Calculate total hours
-    const totalMinutes = workLogs.reduce((sum, [, log]) => sum + (log.total_minutes || 0), 0);
+    const totalMinutes = workLogs.reduce((sum, log) => sum + (log.time_worked_minutes || 0), 0);
     const totalHours = {
         hours: Math.floor(totalMinutes / 60),
         minutes: totalMinutes % 60
@@ -95,14 +135,14 @@ const WorkReportSummary = () => {
         <div className="table-container" style={{ marginBottom: '2rem' }}>
             <div style={{ padding: '2rem' }}>
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
-                    Recent Work Report (Last 7 Days)
+                    Recent Work Report 
                 </h2>
 
                 {workLogs.length === 0 ? (
                     <div className="empty-state">
                         <div className="empty-state-icon">📅</div>
                         <h3 className="empty-state-title">No work logs found</h3>
-                        <p>No work activity recorded for the last 7 days</p>
+                        <p>No work activity recorded for the </p>
                     </div>
                 ) : (
                     <>
@@ -116,30 +156,21 @@ const WorkReportSummary = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {workLogs.map(([date, log]) => (
-                                    <tr key={date}>
+                                {workLogs.map((log) => (
+                                    <tr key={log.id}>
                                         <td>
-                                            <strong>{formatDate(date)}</strong>
+                                            <strong>{formatDate(log.work_date)}</strong>
                                         </td>
                                         <td>
                                             <span style={{ fontFamily: 'monospace', fontSize: '1rem' }}>
-                                                {formatTime(log.hours, log.minutes)}
+                                                {formatTime(Math.floor(log.time_worked_minutes / 60), log.time_worked_minutes % 60)}
                                             </span>
                                         </td>
                                         <td>
-                                            {log.last_status === WorkLogStatusEnum.RUNNING ? (
-                                                <span className="badge badge-success">
-                                                    <span className="badge-dot"></span>Active
-                                                </span>
-                                            ) : (
-                                                <span className="badge badge-secondary">Ended</span>
-                                            )}
+                                                {getStatusBadge(log)}
                                         </td>
                                         <td>
-                                            {log.last_status_time ? new Date(log.last_status_time).toLocaleTimeString('en-US', {
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            }) : '—'}
+                                            —
                                         </td>
                                     </tr>
                                 ))}

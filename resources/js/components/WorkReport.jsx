@@ -74,7 +74,7 @@ const WorkReport = () => {
         try {
             const userId = user.role === UserRoleEnum.HR ? selectedUserId : null;
             const response = await API.getWorkReport(startDate, endDate, userId, page, perPage);
-            setReportData(response.data);
+            setReportData(response);
         } catch (err) {
             addToast(err.message || 'Failed to load work report', 'error');
             setReportData(null);
@@ -102,10 +102,10 @@ const WorkReport = () => {
 
     // Calculate total hours from work logs
     const calculateTotalHours = () => {
-        if (!reportData || !reportData.work_logs) return { hours: 0, minutes: 0 };
+        if (!reportData || !reportData.data) return { hours: 0, minutes: 0 };
         
-        const logs = Object.values(reportData.work_logs);
-        const totalMinutes = logs.reduce((sum, log) => sum + (log.total_minutes || 0), 0);
+        const logs = reportData.data;
+        const totalMinutes = logs.reduce((sum, log) => sum + (log.time_worked_minutes || 0), 0);
         
         return {
             hours: Math.floor(totalMinutes / 60),
@@ -130,6 +130,7 @@ const WorkReport = () => {
     };
 
     const handleGenerateReport = () => {
+        setPage(1); // Reset to first page on new filter
         fetchReport();
     };
 
@@ -169,8 +170,73 @@ const WorkReport = () => {
         emp.email.toLowerCase().includes(employeeSearch.toLowerCase())
     );
 
-    const workLogs = reportData?.work_logs ? Object.entries(reportData.work_logs).sort((a, b) => b[0].localeCompare(a[0])) : [];
+    const workLogs = reportData?.data || [];
     const totalHours = calculateTotalHours();
+    const meta = reportData?.meta || {};
+
+    const Pagination = ({ meta, onPageChange }) => {
+        if (!meta.last_page || meta.last_page <= 1) return null;
+
+        const range = (start, end) => {
+            return [...Array(end - start + 1).keys()].map(i => i + start);
+        };
+
+        return (
+            <div className="pagination" style={{ flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                    <span className="pagination-info">
+                        Showing {meta.from || 0}-{meta.to || 0} of {meta.total} results
+                    </span>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                         <select 
+                            value={perPage}
+                            onChange={(e) => {
+                                setPerPage(Number(e.target.value));
+                                setPage(1);
+                            }}
+                            className="search-input"
+                            style={{ padding: '0.25rem 0.5rem' }}
+                        >
+                            <option value={5}>5 per page</option>
+                            <option value={15}>15 per page</option>
+                            <option value={30}>30 per page</option>
+                            <option value={50}>50 per page</option>
+                        </select>
+
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                                className="pagination-btn"
+                                disabled={meta.current_page === 1}
+                                onClick={() => onPageChange(meta.current_page - 1)}
+                            >
+                                Previous
+                            </button>
+
+                            {range(1, meta.last_page).map((p) => (
+                                <button
+                                    key={p}
+                                    className={`pagination-btn ${meta.current_page === p ? 'active' : ''}`}
+                                    onClick={() => onPageChange(p)}
+                                    style={{ minWidth: '32px' }}
+                                >
+                                    {p}
+                                </button>
+                            ))}
+
+                            <button
+                                className="pagination-btn"
+                                disabled={meta.current_page === meta.last_page}
+                                onClick={() => onPageChange(meta.current_page + 1)}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="table-container" style={{ marginBottom: '2rem' }}>
@@ -331,29 +397,6 @@ const WorkReport = () => {
                     </div>
                 ) : (
                     <>
-                        {/* Employee Info */}
-                        {reportData.user && (
-                            <div style={{ 
-                                marginBottom: '1.5rem', 
-                                padding: '1rem', 
-                                background: 'var(--color-surface)',
-                                borderRadius: '8px',
-                                border: '1px solid var(--color-border)'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <div className="user-avatar" style={{ width: '40px', height: '40px' }}>
-                                        {reportData.user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
-                                    </div>
-                                    <div>
-                                        <div style={{ fontWeight: '600', fontSize: '1rem' }}>{reportData.user.name}</div>
-                                        <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
-                                            {reportData.user.email} • {reportData.user.department || 'No Department'}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
                         {/* Work Logs Table */}
                         {workLogs.length === 0 ? (
                             <div className="empty-state">
@@ -368,35 +411,18 @@ const WorkReport = () => {
                                         <tr>
                                             <th>Date</th>
                                             <th>Hours Worked</th>
-                                            <th>Status</th>
-                                            <th>Last Activity</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {workLogs.map(([date, log]) => (
-                                            <tr key={date}>
+                                        {workLogs.map((log) => (
+                                            <tr key={log.id}>
                                                 <td>
-                                                    <strong>{formatDate(date)}</strong>
+                                                    <strong>{formatDate(log.work_date)}</strong>
                                                 </td>
                                                 <td>
                                                     <span style={{ fontFamily: 'monospace', fontSize: '1rem' }}>
-                                                        {formatTime(log.hours, log.minutes)}
+                                                        {formatTime(Math.floor(log.time_worked_minutes / 60), log.time_worked_minutes % 60)}
                                                     </span>
-                                                </td>
-                                                <td>
-                                                    {log.last_status === WorkLogStatusEnum.RUNNING ? (
-                                                        <span className="badge badge-success">
-                                                            <span className="badge-dot"></span>Active
-                                                        </span>
-                                                    ) : (
-                                                        <span className="badge badge-secondary">Ended</span>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    {log.last_status_time ? new Date(log.last_status_time).toLocaleTimeString('en-US', {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    }) : '—'}
                                                 </td>
                                             </tr>
                                         ))}
@@ -413,81 +439,11 @@ const WorkReport = () => {
                                                     {formatTime(totalHours.hours, totalHours.minutes)}
                                                 </span>
                                             </td>
-                                            <td colSpan="2">
-                                                <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
-                                                    {workLogs.length} day{workLogs.length !== 1 ? 's' : ''} recorded
-                                                </span>
-                                            </td>
                                         </tr>
                                     </tfoot>
                                 </table>
 
-                                {/* Pagination Controls */}
-                                <div style={{ 
-                                    marginTop: '1.5rem', 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'space-between',
-                                    gap: '1rem',
-                                    flexWrap: 'wrap'
-                                }}>
-                                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
-                                        Showing {workLogs.length} of results per page
-                                    </div>
-
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                        <select 
-                                            value={perPage}
-                                            onChange={(e) => {
-                                                setPerPage(Number(e.target.value));
-                                                setPage(1);
-                                            }}
-                                            className="search-input"
-                                            style={{ padding: '0.5rem 1rem', minWidth: '100px' }}
-                                        >
-                                            <option value={5}>5</option>
-                                            <option value={10}>10</option>
-                                            <option value={15}>15</option>
-                                            <option value={30}>30</option>
-                                            <option value={50}>50</option>
-                                        </select>
-
-                                        <button 
-                                            onClick={() => setPage(Math.max(1, page - 1))}
-                                            disabled={page === 1}
-                                            className="btn btn-secondary"
-                                            style={{ padding: '0.5rem 0.75rem', minWidth: '44px' }}
-                                            title="Previous page"
-                                        >
-                                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
-                                            </svg>
-                                        </button>
-
-                                        <span style={{ 
-                                            padding: '0.5rem 1rem',
-                                            background: 'var(--color-surface)',
-                                            borderRadius: '6px',
-                                            fontSize: '0.875rem',
-                                            fontWeight: '500',
-                                            color: 'var(--color-text-primary)'
-                                        }}>
-                                        {page}
-                                        </span>
-
-                                        <button 
-                                            onClick={() => setPage(page + 1)}
-                                            disabled={workLogs.length < perPage}
-                                            className="btn btn-secondary"
-                                            style={{ padding: '0.5rem 0.75rem', minWidth: '44px' }}
-                                            title="Next page"
-                                        >
-                                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
+                                <Pagination meta={meta} onPageChange={setPage} />
                             </>
                         )}
                     </>

@@ -106,8 +106,8 @@ export const API = {
         });
     },
 
-    async getWorkLog(date) {
-        return this.request(`/work-log/calculate?date=${date}`);
+    async getWorkLog() {
+        return this.request('/work-log/calculate');
     },
 
     async updateWorkStatus(status) {
@@ -118,7 +118,7 @@ export const API = {
     },
 
     async getWorkReport(startDate, endDate, userId = null, page = 1, perPage = 15) {
-        let url = `/work-log/calculate?date=${startDate}&end_date=${endDate}&page=${page}&per_page=${perPage}`;
+        let url = `/work-log/reports?start_date=${startDate}&end_date=${endDate}&page=${page}&per_page=${perPage}`;
         if (userId) {
             url += `&user_id=${userId}`;
         }

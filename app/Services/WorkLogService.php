@@ -4,73 +4,78 @@ namespace App\Services;
 
 use App\Models\WorkLog;
 use App\Enums\WorkLogStatusEnum;
-use App\DTOs\WorkLogCalculationDTO;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Repositories\WorkLogRepository;
 use App\Models\User;
+use App\DTOs\WorkLogReportDTO;
+use App\DTOs\WorkLogCalculationDTO;
+use Illuminate\Pagination\LengthAwarePaginator;
+use App\Models\WorkLogsReport;
 
 class WorkLogService
 {
     public function __construct(
         private WorkLogRepository $workLogsRepository
-    ) {}
+    ) {
+    }
 
     public function storeLog(int $userId, WorkLogStatusEnum $status): WorkLog
     {
         $lastLog = User::findOrFail($userId)->latestWorkLog;
+
         if ($lastLog && $lastLog->status === $status->value) {
             throw new \Exception('Invalid action sequence');
         }
 
-        return $this->workLogsRepository->create($userId, $status->value);
-    }
+        $workLog = $this->workLogsRepository->create($userId, $status->value);
 
-    public function getWorkedMinutesByDateRange(int $userId, string $startDate, ?string $endDate = null): array
-    {
-        $start = Carbon::parse($startDate)->startOfDay();
-        $end = $endDate ? Carbon::parse($endDate)->endOfDay() : $start->copy()->endOfDay();
-
-        $logs = $this->workLogsRepository->getLogsForDateRange($userId, $start, $end);
-
-        $results = [];
-        foreach ($logs->groupBy(fn($log) => $log->created_at->format('Y-m-d')) as $date => $dayLogs) {
-            $results[$date] = $this->createDayWorkReport($date, $dayLogs);
+        if ($status->isStopped()) {
+            $this->syncToDailyReport($workLog->user_id, $workLog->created_at);
         }
 
-        return $results;
+        return $workLog;
     }
-    private function createDayWorkReport(string $date, $dayLogs): WorkLogCalculationDTO
+
+    private function syncToDailyReport(int $userId, Carbon $date): WorkLogsReport
     {
-        $totalMinutes = $this->sumMinutesFromStartStopPairs($dayLogs);
-        $lastLog = $dayLogs->last();
-
-        return new WorkLogCalculationDTO(
-            date: $date,
-            totalMinutes: $totalMinutes,
-            lastStatus: $lastLog->status->value ?? null,
-            lastStatusTime: $dayLogs->last()->created_at,
-            hours: floor($totalMinutes / 60),
-            minutes: $totalMinutes % 60
-        );
+        $workLogCalculationDto = $this->getWorkedMinutesToday($userId);
+        return $this->workLogsRepository->updateOrCreateDailyReport($userId, $date, $workLogCalculationDto->totalMinutes);
     }
 
-    private function sumMinutesFromStartStopPairs($dayLogs): int
+    public function getWorkedMinutesToday(int $userId): WorkLogCalculationDTO
+    {
+        return $this->sumMinutesFromStartStopPairs($userId, now()->today());
+    }
+
+    public function getWorkedMinutesTodayForCurrentUser(): WorkLogCalculationDTO
+    {
+        return $this->sumMinutesFromStartStopPairs(auth()->id(), now()->today());
+    }
+
+
+    private function sumMinutesFromStartStopPairs(int $userId, Carbon $today): WorkLogCalculationDTO
     {
         $totalMinutes = 0;
-        $sessionStart = null;
+        $logs = $this->workLogsRepository->getWorkLogs($userId, $today);
 
-        foreach ($dayLogs as $log) {
-            if ($log->status->isRunning() && $sessionStart === null) {
-                $sessionStart = $log->created_at;
-            } elseif ($log->status->isStopped() && $sessionStart !== null) {
-                $totalMinutes += Carbon::parse($sessionStart)->diffInMinutes($log->created_at);
-                $sessionStart = null;
+        $startLog = null;
+
+        foreach ($logs as $log) {
+            if ($log->status->isRunning()) {
+                $startLog = $log;
+            } elseif ($log->status->isStopped() && $startLog !== null) {
+                $totalMinutes += $this->calculateSessionMinutes($startLog, $log);
+                $startLog = null;
             }
         }
-
-        return $totalMinutes;
+        return new WorkLogCalculationDTO($totalMinutes, $logs->last()?->status->value, $logs->last()?->created_at);
     }
 
+    private function calculateSessionMinutes(WorkLog $startLog, WorkLog $endLog): int
+    {
+        return $startLog->created_at->diffInMinutes($endLog->created_at);
+    }
     public function autoEndRunningSessions(): int
     {
         $users = User::with('latestWorkLog')->get();
@@ -80,5 +85,10 @@ class WorkLogService
         }
 
         return $runningUsers->count();
+    }
+
+    public function getWorkLogsReports(WorkLogReportDTO $dto): LengthAwarePaginator
+    {
+        return $this->workLogsRepository->getWorkLogsReports($dto);
     }
 }
