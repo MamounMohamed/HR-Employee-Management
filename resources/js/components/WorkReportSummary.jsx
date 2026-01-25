@@ -52,7 +52,7 @@ const WorkReportSummary = () => {
     useEffect(() => {
         fetchReport();
         fetchCurrentWorkLog();
-    }, [fetchReport, fetchCurrentWorkLog]);
+    }, [fetchReport, fetchCurrentWorkLog, refreshTrigger]);
 
     // Listen for work log updates from context
     useEffect(() => {

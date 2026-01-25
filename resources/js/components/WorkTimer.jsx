@@ -59,6 +59,7 @@ const WorkTimer = () => {
             const response = await API.getWorkLog();
             setWorkLog(response.data);
             updateWorkLog(response.data);
+            triggerRefresh();
             initializeLocalState(response.data);
         } catch (err) {
             addToast(err.message || 'Failed to load work log', 'error');

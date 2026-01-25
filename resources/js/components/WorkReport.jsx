@@ -4,10 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { WorkLogStatusEnum } from '../enums/WorkLogStatusEnum';
 import { UserRoleEnum } from '../enums/UserRoleEnum';
+import { useWorkLog } from '../context/WorkLogContext';
 
 const WorkReport = () => {
     const { user } = useAuth();
     const { addToast } = useToast();
+    const { refreshTrigger } = useWorkLog();
     
     // Get date 7 days ago as default start date
     const getDefaultStartDate = () => {
@@ -83,10 +85,10 @@ const WorkReport = () => {
         }
     }, [startDate, endDate, selectedUserId, user, addToast, page, perPage]);
 
-    // Load report on mount
+    // Load report on mount or when refresh is triggered
     useEffect(() => {
         fetchReport();
-    }, [fetchReport]);
+    }, [fetchReport, refreshTrigger]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
