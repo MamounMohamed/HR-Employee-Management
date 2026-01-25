@@ -17,8 +17,7 @@ class WorkLogService
 {
     public function __construct(
         private WorkLogRepository $workLogsRepository
-    ) {
-    }
+    ) {}
 
     public function storeLog(int $userId, WorkLogStatusEnum $status): WorkLog
     {
@@ -30,14 +29,10 @@ class WorkLogService
 
         $workLog = $this->workLogsRepository->create($userId, $status->value);
 
-        if ($status->isStopped()) {
-            $this->syncToDailyReport($workLog->user_id, $workLog->created_at);
-        }
-
         return $workLog;
     }
 
-    private function syncToDailyReport(int $userId, Carbon $date): WorkLogsReport
+    public function syncToDailyReport(int $userId, Carbon $date): WorkLogsReport
     {
         $workLogCalculationDto = $this->getWorkedMinutesToday($userId);
         return $this->workLogsRepository->updateOrCreateDailyReport($userId, $date, $workLogCalculationDto->totalMinutes);
@@ -50,7 +45,7 @@ class WorkLogService
 
     public function getWorkedMinutesTodayForCurrentUser(): WorkLogCalculationDTO
     {
-        return $this->sumMinutesFromStartStopPairs(auth()->id(), now()->today());
+        return $this->sumMinutesFromStartStopPairs(Auth::id(), now()->today());
     }
 
 
