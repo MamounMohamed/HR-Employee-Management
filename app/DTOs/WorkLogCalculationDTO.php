@@ -10,8 +10,7 @@ readonly class WorkLogCalculationDTO
         public int $totalMinutes,
         public ?string $lastStatus,
         public ?Carbon $lastStatusTime,
-    ) {
-    }
+    ) {}
 
     public function toArray(): array
     {

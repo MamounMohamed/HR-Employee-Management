@@ -413,6 +413,7 @@ const WorkReport = () => {
                                         <tr>
                                             <th>Date</th>
                                             <th>Hours Worked</th>
+                                            <th>Notes</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -425,6 +426,9 @@ const WorkReport = () => {
                                                     <span style={{ fontFamily: 'monospace', fontSize: '1rem' }}>
                                                         {formatTime(Math.floor(log.time_worked_minutes / 60), log.time_worked_minutes % 60)}
                                                     </span>
+                                                </td>
+                                                <td style={{ maxWidth: '300px', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                                                    {log.notes || '-'}
                                                 </td>
                                             </tr>
                                         ))}
@@ -441,6 +445,7 @@ const WorkReport = () => {
                                                     {formatTime(totalHours.hours, totalHours.minutes)}
                                                 </span>
                                             </td>
+                                            <td></td>
                                         </tr>
                                     </tfoot>
                                 </table>

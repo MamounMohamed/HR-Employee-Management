@@ -123,5 +123,12 @@ export const API = {
             url += `&user_id=${userId}`;
         }
         return this.request(url);
+    },
+
+    async updateWorkLogNotes(reportId, notes) {
+        return this.request(`/work-log/reports/${reportId}/notes`, {
+            method: 'PATCH',
+            body: JSON.stringify({ notes }),
+        });
     }
 };

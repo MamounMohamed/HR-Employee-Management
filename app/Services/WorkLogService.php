@@ -12,11 +12,13 @@ use App\DTOs\WorkLogReportDTO;
 use App\DTOs\WorkLogCalculationDTO;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\WorkLogsReport;
+use App\Repositories\WorkLogReportRepository;
 
 class WorkLogService
 {
     public function __construct(
-        private WorkLogRepository $workLogsRepository
+        private WorkLogRepository $workLogsRepository,
+        private WorkLogReportRepository $workLogReportRepository
     ) {}
 
     public function storeLog(int $userId, WorkLogStatusEnum $status): WorkLog
@@ -34,13 +36,8 @@ class WorkLogService
 
     public function syncToDailyReport(int $userId, Carbon $date): WorkLogsReport
     {
-        $workLogCalculationDto = $this->getWorkedMinutesToday($userId);
-        return $this->workLogsRepository->updateOrCreateDailyReport($userId, $date, $workLogCalculationDto->totalMinutes);
-    }
-
-    public function getWorkedMinutesToday(int $userId): WorkLogCalculationDTO
-    {
-        return $this->sumMinutesFromStartStopPairs($userId, now()->today());
+        $workLogCalculationDto = $this->getWorkedMinutesTodayForCurrentUser();
+        return $this->workLogReportRepository->updateOrCreateDailyReport($userId, $date, $workLogCalculationDto->totalMinutes);
     }
 
     public function getWorkedMinutesTodayForCurrentUser(): WorkLogCalculationDTO
@@ -80,10 +77,5 @@ class WorkLogService
         }
 
         return $runningUsers->count();
-    }
-
-    public function getWorkLogsReports(WorkLogReportDTO $dto): LengthAwarePaginator
-    {
-        return $this->workLogsRepository->getWorkLogsReports($dto);
     }
 }

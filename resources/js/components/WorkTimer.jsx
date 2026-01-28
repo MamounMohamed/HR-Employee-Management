@@ -11,11 +11,15 @@ const WorkTimer = () => {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [displayTime, setDisplayTime] = useState('00:00:00');
+    const [notes, setNotes] = useState('');
+    const [reportId, setReportId] = useState(null);
+    const [isSavingNotes, setIsSavingNotes] = useState(false);
     
     // Client-side state for tracking running timer
     const localStartTimeRef = useRef(null);
     const localTotalMinutesRef = useRef(0);
     const timerIntervalRef = useRef(null);
+    const notesTimeoutRef = useRef(null);
 
     // Initialize local state from sessionStorage or worklog
     const initializeLocalState = useCallback((workLogData) => {
@@ -53,25 +57,76 @@ const WorkTimer = () => {
     }, []);
 
     // Fetch work log data
-    const fetchWorkLog = useCallback(async () => {
+    const fetchWorkLogAndReport = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await API.getWorkLog();
-            setWorkLog(response.data);
-            updateWorkLog(response.data);
+            // 1. Fetch work log status
+            const logResponse = await API.getWorkLog();
+            const workLogData = logResponse.data;
+            setWorkLog(workLogData);
+            updateWorkLog(workLogData);
+            initializeLocalState(workLogData);
+
+            // 2. Fetch today's report for notes
+            const today = new Date().toISOString().split('T')[0];
+            const reportResponse = await API.getWorkReport(today, today);
+            
+            // Assuming getWorkReport returns { data: [...] } and it's paginated
+            const reports = reportResponse.data || [];
+            const todayReport = reports.find(r => r.work_date === today);
+            
+            if (todayReport) {
+                setReportId(todayReport.id);
+                setNotes(todayReport.notes || '');
+            } else {
+                setReportId(null);
+                setNotes('');
+            }
+
             triggerRefresh();
-            initializeLocalState(response.data);
         } catch (err) {
-            addToast(err.message || 'Failed to load work log', 'error');
+            addToast(err.message || 'Failed to load work data', 'error');
         } finally {
             setLoading(false);
         }
-    }, [addToast, updateWorkLog, initializeLocalState]);
+    }, [addToast, updateWorkLog, initializeLocalState, triggerRefresh]);
 
-    // Load work log on mount
+    // Load data on mount
     useEffect(() => {
-        fetchWorkLog();
-    }, [fetchWorkLog]);
+        fetchWorkLogAndReport();
+    }, [fetchWorkLogAndReport]);
+
+    // Handle notes change with auto-save
+    const handleNotesChange = (e) => {
+        const newNotes = e.target.value;
+        setNotes(newNotes);
+
+        if (!reportId) return;
+
+        // Clear existing timeout
+        if (notesTimeoutRef.current) {
+            clearTimeout(notesTimeoutRef.current);
+        }
+
+        // Set new timeout for auto-save (1.5 seconds after typing stops)
+        notesTimeoutRef.current = setTimeout(() => {
+            saveNotes(newNotes);
+        }, 1500);
+    };
+
+    const saveNotes = async (content) => {
+        if (!reportId) return;
+        
+        setIsSavingNotes(true);
+        try {
+            await API.updateWorkLogNotes(reportId, content);
+            // No toast for auto-save to keep it subtle, unless it's a manual trigger
+        } catch (err) {
+            addToast(err.message || 'Failed to save notes', 'error');
+        } finally {
+            setIsSavingNotes(false);
+        }
+    };
 
     // Calculate and update display time
     useEffect(() => {
@@ -158,7 +213,7 @@ const WorkTimer = () => {
             addToast(`Work ${status === WorkLogStatusEnum.RUNNING ? 'started' : 'ended'} successfully`, 'success');
             
             // Fetch fresh data in the background (but don't wait for it)
-            fetchWorkLog();
+            fetchWorkLogAndReport();
             triggerRefresh();
         } catch (err) {
             addToast(err.message || 'Failed to update work status', 'error');
@@ -236,25 +291,167 @@ const WorkTimer = () => {
     }
 
     return (
-        <div className="table-container" style={{ marginBottom: '2rem' }}>
-            <div style={{ padding: '2rem', textAlign: 'center' }}>
-                <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--color-text-primary)' }}>
-                    Today's Work Time
-                </h2>
+        <div className="card shadow-sm border-0 overflow-hidden" style={{ 
+            borderRadius: '20px', 
+            background: 'var(--color-bg-primary)',
+            marginBottom: '2.5rem'
+        }}>
+            <div style={{ padding: '2.5rem' }}>
                 <div style={{ 
-                    fontSize: '3rem', 
-                    fontWeight: 'bold', 
-                    fontFamily: 'monospace',
-                    color: 'var(--color-primary)',
-                    marginBottom: '1.5rem',
-                    letterSpacing: '0.1em'
+                    display: 'grid', 
+                    gridTemplateColumns: '1fr 1.25fr', 
+                    gap: '4rem',
+                    alignItems: 'stretch'
                 }}>
-                    {displayTime}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-                    {getButtons()}
+                    {/* Timer Section */}
+                    <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        textAlign: 'center', 
+                        borderRight: '1px solid var(--color-border-subtle)', 
+                        paddingRight: '4rem' 
+                    }}>
+                        <div style={{ 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            gap: '0.5rem',
+                            padding: '0.5rem 1rem',
+                            backgroundColor: 'rgba(var(--color-primary-rgb), 0.05)',
+                            borderRadius: '100px',
+                            marginBottom: '1.5rem'
+                        }}>
+                            <span style={{ 
+                                width: '8px', 
+                                height: '8px', 
+                                borderRadius: '50%', 
+                                backgroundColor: workLog?.last_status === WorkLogStatusEnum.RUNNING ? '#10b981' : '#64748b',
+                                animation: workLog?.last_status === WorkLogStatusEnum.RUNNING ? 'pulse 2s infinite' : 'none'
+                            }}></span>
+                            <span style={{ 
+                                fontSize: '0.75rem', 
+                                fontWeight: '700', 
+                                color: 'var(--color-text-secondary)', 
+                                textTransform: 'uppercase', 
+                                letterSpacing: '0.1em' 
+                            }}>
+                                {workLog?.last_status === WorkLogStatusEnum.RUNNING ? 'Currently Working' : 'Work Paused'}
+                            </span>
+                        </div>
+
+                        <div style={{ 
+                            fontSize: '4.5rem', 
+                            fontWeight: '800', 
+                            fontFamily: 'var(--font-mono, "Inter", monospace)',
+                            color: 'var(--color-text-primary)',
+                            lineHeight: '1',
+                            margin: '1rem 0 2.5rem 0',
+                            letterSpacing: '-0.04em',
+                            fontVariantNumeric: 'tabular-nums'
+                        }}>
+                            {displayTime}
+                        </div>
+
+                        <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                            {getButtons()}
+                        </div>
+                    </div>
+
+                    {/* Notes Section */}
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'baseline', 
+                            marginBottom: '1.25rem' 
+                        }}>
+                            <h2 style={{ 
+                                fontSize: '1rem', 
+                                fontWeight: '700', 
+                                color: 'var(--color-text-primary)',
+                                letterSpacing: '-0.01em'
+                            }}>
+                                Daily Focus & Notes
+                            </h2>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                {isSavingNotes ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                        <div className="loading-spinner" style={{ width: '12px', height: '12px', borderWidth: '2px' }}></div>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', fontWeight: '500' }}>
+                                            Syncing...
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        Saved
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        
+                        <div style={{ position: 'relative', flex: 1 }}>
+                            <textarea
+                                className="form-control"
+                                placeholder={reportId ? "What are your goals or achievements for today?..." : "Start your work log to enable notes."}
+                                value={notes}
+                                onChange={handleNotesChange}
+                                disabled={!reportId}
+                                style={{ 
+                                    width: '100%',
+                                    height: '100%',
+                                    minHeight: '180px',
+                                    resize: 'none',
+                                    padding: '1.25rem',
+                                    borderRadius: '16px',
+                                    backgroundColor: 'var(--color-bg-secondary)',
+                                    border: '2px solid transparent',
+                                    fontSize: '1rem',
+                                    lineHeight: '1.6',
+                                    color: 'var(--color-text-primary)',
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)',
+                                    outline: 'none'
+                                }}
+                                onFocus={(e) => {
+                                    e.target.style.backgroundColor = 'var(--color-bg-primary)';
+                                    e.target.style.borderColor = 'rgba(var(--color-primary-rgb), 0.3)';
+                                    e.target.style.boxShadow = '0 0 0 4px rgba(var(--color-primary-rgb), 0.1)';
+                                }}
+                                onBlur={(e) => {
+                                    e.target.style.backgroundColor = 'var(--color-bg-secondary)';
+                                    e.target.style.borderColor = 'transparent';
+                                    e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)';
+                                    saveNotes(notes);
+                                }}
+                            />
+                        </div>
+
+                        {!reportId && (
+                            <div style={{ 
+                                marginTop: '1rem', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '0.5rem',
+                                color: 'var(--color-text-tertiary)',
+                                fontSize: '0.8rem'
+                            }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                <span>Notes activate automatically once you start working.</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
+            
+            <style>{`
+                @keyframes pulse {
+                    0% { transform: scale(0.95); opacity: 0.8; }
+                    50% { transform: scale(1.1); opacity: 1; }
+                    100% { transform: scale(0.95); opacity: 0.8; }
+                }
+            `}</style>
         </div>
     );
 };

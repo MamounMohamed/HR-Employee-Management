@@ -10,6 +10,7 @@ class WorkLogsReport extends Model
         'user_id',
         'work_date',
         'time_worked_minutes',
+        'notes',
     ];
 
     protected $casts = [

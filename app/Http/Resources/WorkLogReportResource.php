@@ -14,9 +14,9 @@ class WorkLogReportResource extends JsonResource
             'user_id' => $this->user_id,
             'work_date' => $this->work_date->format('Y-m-d'),
             'time_worked_minutes' => $this->time_worked_minutes,
+            'notes' => $this->notes,
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),
         ];
     }
-
 }
