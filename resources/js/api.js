@@ -104,5 +104,31 @@ export const API = {
         return this.request(`/employees/${id}/reactivate`, {
             method: 'POST',
         });
+    },
+
+    async getWorkLog() {
+        return this.request('/work-log/calculate');
+    },
+
+    async updateWorkStatus(status) {
+        return this.request('/work-log', {
+            method: 'POST',
+            body: JSON.stringify({ status }),
+        });
+    },
+
+    async getWorkReport(startDate, endDate, userId = null, page = 1, perPage = 15) {
+        let url = `/work-log/reports?start_date=${startDate}&end_date=${endDate}&page=${page}&per_page=${perPage}`;
+        if (userId) {
+            url += `&user_id=${userId}`;
+        }
+        return this.request(url);
+    },
+
+    async updateWorkLogNotes(reportId, notes) {
+        return this.request(`/work-log/reports/${reportId}/notes`, {
+            method: 'PATCH',
+            body: JSON.stringify({ notes }),
+        });
     }
 };

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\EmployeeRoleEnum;
 use App\Enums\PaginationEnum;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -13,7 +14,7 @@ class EmployeeListRequest extends FormRequest
     public function authorize(): bool
     {
         // All authenticated users can view employee list
-        return true;
+        return $this->user()?->role->value === EmployeeRoleEnum::HR->value;
     }
 
     /**
