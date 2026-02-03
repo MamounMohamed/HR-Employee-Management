@@ -22,10 +22,17 @@ class WorkLogReportRepository
         );
     }
 
-    public function updateNotes(WorkLogsReport $workLogReport, string $notes): WorkLogsReport
+    public function updateNotes(int $userId, string $notes): WorkLogsReport
     {
-        $workLogReport->update(['notes' => $notes]);
-        return $workLogReport;
+        return WorkLogsReport::updateOrCreate(
+            [
+                'user_id'   => $userId,
+                'work_date' => Carbon::today(),
+            ],
+            [
+                'notes' => $notes ?? '',
+            ]
+        );
     }
 
     public function getWorkLogsReports(WorkLogReportDTO $dto): LengthAwarePaginator

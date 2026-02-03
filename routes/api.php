@@ -50,7 +50,7 @@ Route::middleware('auth:sanctum')
         Route::get('/calculate', [WorkLogController::class, 'calculateWorkMinutes']);
         Route::get('/reports', [WorkLogReportController::class, 'index']);
         Route::patch(
-            '/reports/{workLogReport}/notes',
+            '/reports/notes',
             [WorkLogReportController::class, 'updateNotes']
         );
     });

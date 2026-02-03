@@ -13,7 +13,7 @@ class   UpdateWorkLogReportNotesRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return Auth::user()->role === EmployeeRoleEnum::HR->value || Auth::id() === $this->route('workLogReport')->user_id;
+        return Auth::user()->role === EmployeeRoleEnum::HR->value || Auth::id();
     }
 
     /**

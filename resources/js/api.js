@@ -125,8 +125,8 @@ export const API = {
         return this.request(url);
     },
 
-    async updateWorkLogNotes(reportId, notes) {
-        return this.request(`/work-log/reports/${reportId}/notes`, {
+    async updateWorkLogNotes(notes) {
+        return this.request('/work-log/reports/notes', {
             method: 'PATCH',
             body: JSON.stringify({ notes }),
         });

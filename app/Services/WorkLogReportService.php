@@ -17,8 +17,8 @@ class WorkLogReportService
         return $this->workLogReportRepository->getWorkLogsReports($dto);
     }
 
-    public function updateNotes(WorkLogsReport $workLogReport, ?string $notes): WorkLogsReport
+    public function updateOrCreateTodayNotes(int $userId, ?string $notes): WorkLogsReport
     {
-        return $this->workLogReportRepository->updateNotes($workLogReport, $notes ?? '');
+        return $this->workLogReportRepository->updateNotes($userId, $notes ?? '');
     }
 }

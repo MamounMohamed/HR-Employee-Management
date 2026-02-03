@@ -11,6 +11,7 @@ use App\Http\Requests\WorkLogReportsRequest;
 use Illuminate\Http\JsonResponse;
 use App\Http\Requests\UpdateWorkLogReportNotesRequest;
 use App\Models\WorkLogsReport;
+use Illuminate\Support\Facades\Auth;
 
 class WorkLogReportController extends Controller
 {
@@ -23,10 +24,12 @@ class WorkLogReportController extends Controller
         return $this->response->success(WorkLogReportResource::collection($logs));
     }
 
-    public function updateNotes(UpdateWorkLogReportNotesRequest $request, WorkLogsReport $workLogReport)
+    public function updateNotes(UpdateWorkLogReportNotesRequest $request)
     {
-        $note = $request->validated('notes');
-        $workLogReport = $this->workLogReportService->updateNotes($workLogReport, $note);
+        $workLogReport = $this->workLogReportService->updateOrCreateTodayNotes(
+            Auth::id(),
+            $request->validated('notes')
+        );
         return $this->response->success(new WorkLogReportResource($workLogReport));
     }
 }
