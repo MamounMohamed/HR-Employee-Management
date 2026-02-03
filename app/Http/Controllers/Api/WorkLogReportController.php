@@ -10,8 +10,9 @@ use App\DTOs\WorkLogReportDTO;
 use App\Http\Requests\WorkLogReportsRequest;
 use Illuminate\Http\JsonResponse;
 use App\Http\Requests\UpdateWorkLogReportNotesRequest;
-use App\Models\WorkLogsReport;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\WorkLogReportDayDetailsRequest;
+use App\DTOs\WorkLogReportDayDetailsDTO;
 
 class WorkLogReportController extends Controller
 {
@@ -31,5 +32,12 @@ class WorkLogReportController extends Controller
             $request->validated('notes')
         );
         return $this->response->success(new WorkLogReportResource($workLogReport));
+    }
+
+    public function dayDetails(WorkLogReportDayDetailsRequest $request)
+    {
+        $dto = WorkLogReportDayDetailsDTO::fromRequest($request->validated());
+        $logs = $this->workLogReportService->getDayDetails($dto);
+        return $this->response->success($logs);
     }
 }

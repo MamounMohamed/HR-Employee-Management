@@ -15,8 +15,9 @@ class WorkLogRepository
             'status' => $status,
         ]);
     }
-    public function getWorkLogs(int $userId, Carbon $today): Collection
+    public function getWorkLogs(int $userId, $day = null): Collection
     {
+        $today = $day ?? Carbon::today();
         return WorkLog::where('user_id', $userId)
             ->whereDate('created_at', $today)
             ->orderBy('created_at')

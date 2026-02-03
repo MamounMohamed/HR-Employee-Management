@@ -53,4 +53,8 @@ Route::middleware('auth:sanctum')
             '/reports/notes',
             [WorkLogReportController::class, 'updateNotes']
         );
+        Route::get(
+            '/reports/day-details',
+            [WorkLogReportController::class, 'dayDetails']
+        );
     });
