@@ -13,10 +13,13 @@ use App\Http\Requests\UpdateWorkLogReportNotesRequest;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\WorkLogReportDayDetailsRequest;
 use App\DTOs\WorkLogReportDayDetailsDTO;
+use App\Http\Resources\WorkLogReportDayDetailsResource;
 
 class WorkLogReportController extends Controller
 {
-    public function __construct(private WorkLogReportService $workLogReportService, private readonly ResponseService $response) {}
+    public function __construct(private WorkLogReportService $workLogReportService, private readonly ResponseService $response)
+    {
+    }
 
     public function index(WorkLogReportsRequest $request): JsonResponse
     {
@@ -36,8 +39,7 @@ class WorkLogReportController extends Controller
 
     public function dayDetails(WorkLogReportDayDetailsRequest $request)
     {
-        $dto = WorkLogReportDayDetailsDTO::fromRequest($request->validated());
-        $logs = $this->workLogReportService->getDayDetails($dto);
-        return $this->response->success($logs);
+        $detailedDay = $this->workLogReportService->getDayDetails($request->validated('user_id'), $request->date('work_date'));
+        return $this->response->success(new WorkLogReportDayDetailsResource($detailedDay));
     }
 }

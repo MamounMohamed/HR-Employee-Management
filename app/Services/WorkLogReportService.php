@@ -8,14 +8,16 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use App\Repositories\WorkLogReportRepository;
 use App\Repositories\WorkLogRepository;
 use Illuminate\Support\Collection;
-use App\DTOs\WorkLogReportDayDetailsDTO;
+use App\DTOs\WorkLogDayDetailsDTO;
 use App\Enums\WorkLogStatusEnum;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
+
 
 class WorkLogReportService
 {
-    public function __construct(private WorkLogReportRepository $workLogReportRepository, private WorkLogRepository $workLogsRepository) {}
+    public function __construct(private WorkLogReportRepository $workLogReportRepository, private WorkLogRepository $workLogsRepository)
+    {
+    }
 
     public function getWorkLogsReports(WorkLogReportDTO $dto): LengthAwarePaginator
     {
@@ -26,66 +28,45 @@ class WorkLogReportService
     {
         return $this->workLogReportRepository->updateNotes($userId, $notes ?? '');
     }
-    public function getDayDetails(WorkLogReportDayDetailsDTO $dto): array
+    public function getDayDetails(int $userId, Carbon $workDate): WorkLogDayDetailsDTO
     {
-        $logs = $this->workLogsRepository->getWorkLogs($dto->userId, $dto->workDate);
-
+        $logs = $this->workLogsRepository->getWorkLogs($userId, $workDate);
+        return $this->calculateDayDetails($logs);
+    }
+    private function calculateDayDetails(Collection $logs): WorkLogDayDetailsDTO
+    {
         if ($logs->isEmpty()) {
-            return [
-                'start' => null,
-                'end' => null,
-                'breaks' => [],
-                'worked_duration_minutes' => 0,
-            ];
+            return WorkLogDayDetailsDTO::empty();
         }
 
-        return $this->handleLogs($logs);
-    }
+        $sortedLogs = $logs->sortBy('created_at')->values();
 
-    private function handleLogs(Collection $logs): array
-    {
-        // Sort by created_at
-        $logs = $logs->sortBy('created_at')->values();
-
-        $start = null;
-        $end = null;
+        $dayStart = null;
+        $dayEnd = null;
         $breaks = [];
-        $lastStop = null;
-        $workedMinutes = 0;
+        $lastStoppedAt = null;
 
-        foreach ($logs as $log) {
+        foreach ($sortedLogs as $log) {
             $time = Carbon::parse($log->created_at);
 
             if ($log->status === WorkLogStatusEnum::RUNNING) {
-                if (!$start) {
-                    $start = $time;
-                }
-                if ($lastStop) {
-                    // There was a break
+                $dayStart ??= $time;
+
+                if ($lastStoppedAt) {
                     $breaks[] = [
-                        'from' => $lastStop,
+                        'from' => $lastStoppedAt,
                         'to' => $time,
-                        'duration_minutes' => $time->diffInMinutes($lastStop),
                     ];
-                    $lastStop = null;
+                    $lastStoppedAt = null;
                 }
             }
 
             if ($log->status === WorkLogStatusEnum::STOPPED) {
-                $end = $time;
-                if ($start) {
-                    $workedMinutes += $time->diffInMinutes($start) - array_sum(array_column($breaks, 'duration_minutes'));
-                }
-                $lastStop = $time;
-                $start = null; // reset for next running period
+                $dayEnd = $time;
+                $lastStoppedAt = $time;
             }
         }
 
-        return [
-            'start' => $logs->firstWhere('status', 'running')?->created_at,
-            'end' => $logs->reverse()->firstWhere('status', 'stopped')?->created_at,
-            'breaks' => $breaks,
-            'worked_duration_minutes' => $workedMinutes,
-        ];
+        return new WorkLogDayDetailsDTO($dayStart, $dayEnd, $breaks);
     }
 }
