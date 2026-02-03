@@ -130,5 +130,11 @@ export const API = {
             method: 'PATCH',
             body: JSON.stringify({ notes }),
         });
+    },
+
+    async getDayDetails(userId, workDate) {
+        // Format date as DD-MM-YYYY for the API
+        const formattedDate = workDate.split('-').reverse().join('-');
+        return this.request(`/work-log/reports/day-details?user_id=${userId}&work_date=${formattedDate}`);
     }
 };

@@ -5,6 +5,7 @@ import WorkTimer from '../components/WorkTimer';
 import WorkReport from '../components/WorkReport';
 import WorkReportSummary from '../components/WorkReportSummary';
 import EmployeesTable from '../components/EmployeesTable';
+import DayDetails from '../components/DayDetails';
 import { useAuth } from '../context/AuthContext';
 import { UserRoleEnum } from '../enums/UserRoleEnum';
 
@@ -19,6 +20,7 @@ const Dashboard = () => {
         return false;
     });
     const [activeView, setActiveView] = useState('home');
+    const [selectedDayLog, setSelectedDayLog] = useState(null);
 
     // Handle window resize to auto-close sidebar on mobile
     useEffect(() => {
@@ -44,7 +46,23 @@ const Dashboard = () => {
             setActiveView('home');
             return;
         }
+        // Clear selected day log when changing views (except when going to day-details)
+        if (view !== 'day-details') {
+            setSelectedDayLog(null);
+        }
         setActiveView(view);
+    };
+
+    // Handle clicking on a report row to show day details
+    const handleDaySelect = (dayLog) => {
+        setSelectedDayLog(dayLog);
+        setActiveView('day-details');
+    };
+
+    // Handle going back from day details to reports
+    const handleBackToReports = () => {
+        setSelectedDayLog(null);
+        setActiveView('reports');
     };
 
     // Redirect employees away from employees view if they somehow access it
@@ -57,7 +75,9 @@ const Dashboard = () => {
     const renderContent = () => {
         switch (activeView) {
             case 'reports':
-                return <WorkReport />;
+                return <WorkReport onDaySelect={handleDaySelect} />;
+            case 'day-details':
+                return <DayDetails dayLog={selectedDayLog} onBack={handleBackToReports} />;
             case 'employees':
                 return <EmployeesTable />;
             case 'home':
@@ -92,3 +112,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

@@ -2,11 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { API } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { WorkLogStatusEnum } from '../enums/WorkLogStatusEnum';
 import { UserRoleEnum } from '../enums/UserRoleEnum';
 import { useWorkLog } from '../context/WorkLogContext';
 
-const WorkReport = () => {
+const WorkReport = ({ onDaySelect }) => {
     const { user } = useAuth();
     const { addToast } = useToast();
     const { refreshTrigger } = useWorkLog();
@@ -163,6 +162,13 @@ const WorkReport = () => {
         setSelectedEmployeeName('');
         setEmployeeSearch('');
         setShowEmployeeDropdown(false);
+    };
+
+    // Handle row click to navigate to day details page
+    const handleRowClick = (log) => {
+        if (onDaySelect) {
+            onDaySelect(log);
+        }
     };
 
     // Filter employees based on search
@@ -408,17 +414,39 @@ const WorkReport = () => {
                             </div>
                         ) : (
                             <>
+                                {/* Hint for clickable rows */}
+                                <p style={{ 
+                                    fontSize: '0.875rem', 
+                                    color: 'var(--color-text-tertiary)', 
+                                    marginBottom: '1rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}>
+                                    <span>💡</span> Click on any row to view detailed breakdown
+                                </p>
+
                                 <table className="table">
                                     <thead>
                                         <tr>
                                             <th>Date</th>
                                             <th>Hours Worked</th>
                                             <th>Notes</th>
+                                            <th style={{ width: '50px' }}></th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {workLogs.map((log) => (
-                                            <tr key={log.id}>
+                                            <tr 
+                                                key={log.id}
+                                                onClick={() => handleRowClick(log)}
+                                                style={{
+                                                    cursor: 'pointer',
+                                                    transition: 'background 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-surface-hover)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = ''}
+                                            >
                                                 <td>
                                                     <strong>{formatDate(log.work_date)}</strong>
                                                 </td>
@@ -429,6 +457,14 @@ const WorkReport = () => {
                                                 </td>
                                                 <td style={{ maxWidth: '300px', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                                                     {log.notes || '-'}
+                                                </td>
+                                                <td>
+                                                    <span style={{ 
+                                                        color: 'var(--color-primary)', 
+                                                        fontSize: '1.25rem' 
+                                                    }}>
+                                                        →
+                                                    </span>
                                                 </td>
                                             </tr>
                                         ))}
@@ -445,6 +481,7 @@ const WorkReport = () => {
                                                     {formatTime(totalHours.hours, totalHours.minutes)}
                                                 </span>
                                             </td>
+                                            <td></td>
                                             <td></td>
                                         </tr>
                                     </tfoot>
