@@ -358,7 +358,6 @@ const DayDetails = ({ dayLog, onBack }) => {
                                     borderRadius: '12px',
                                     border: '1px dashed var(--color-border)'
                                 }}>
-                                    <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>😊</span>
                                     No breaks recorded for this day
                                 </div>
                             )}

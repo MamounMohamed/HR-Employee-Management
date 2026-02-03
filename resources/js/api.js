@@ -136,5 +136,9 @@ export const API = {
         // Format date as DD-MM-YYYY for the API
         const formattedDate = workDate.split('-').reverse().join('-');
         return this.request(`/work-log/reports/day-details?user_id=${userId}&work_date=${formattedDate}`);
+    },
+
+    async getLatestWorkLogStatus(userId) {
+        return this.request(`/work-log/latest-status?user_id=${userId}`);
     }
 };

@@ -48,6 +48,7 @@ Route::middleware('auth:sanctum')
     ->group(function () {
         Route::post('/', [WorkLogController::class, 'store']);
         Route::get('/calculate', [WorkLogController::class, 'calculateWorkMinutes']);
+        Route::get('/latest-status', [WorkLogController::class, 'latestStatus']);
         Route::get('/reports', [WorkLogReportController::class, 'index']);
         Route::patch(
             '/reports/notes',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { API } from '../api';
 import { useToast } from '../context/ToastContext';
 import { useWorkLog } from '../context/WorkLogContext';
@@ -10,6 +10,11 @@ const WorkReportSummary = () => {
     const [reportData, setReportData] = useState(null);
     const [currentWorkLog, setCurrentWorkLog] = useState(null);
     const [loading, setLoading] = useState(false);
+
+    // Live timer state
+    const [liveTotalMinutes, setLiveTotalMinutes] = useState(0);
+    const timerIntervalRef = useRef(null);
+    const lastStatusRef = useRef(null);
 
     // Get date 6 days ago as start date
     const getStartDate = () => {
@@ -61,6 +66,52 @@ const WorkReportSummary = () => {
         }
     }, [contextWorkLog, refreshTrigger]);
 
+    // Initialize/Update Live Timer
+    useEffect(() => {
+        const updateLiveTime = () => {
+            if (currentWorkLog && currentWorkLog.last_status === WorkLogStatusEnum.RUNNING) {
+                const startTime = new Date(currentWorkLog.last_status_time);
+                const now = new Date();
+                const elapsedMinutes = Math.floor((now - startTime) / (1000 * 60));
+                
+                // Base minutes from DB + elapsed minutes
+                const total = (currentWorkLog.total_minutes || 0) + elapsedMinutes;
+                setLiveTotalMinutes(total);
+            } else if (currentWorkLog) {
+                // If stopped, just show DB value
+                setLiveTotalMinutes(currentWorkLog.total_minutes || 0);
+            }
+        };
+
+        // Run immediately
+        updateLiveTime();
+
+        // Clear existing interval
+        if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+        }
+
+        // Check if status changed from running to stopped
+        if (lastStatusRef.current === WorkLogStatusEnum.RUNNING && 
+            currentWorkLog?.last_status !== WorkLogStatusEnum.RUNNING) {
+            // Refetch report to ensure we have the final correct time from DB
+            fetchReport();
+        }
+        lastStatusRef.current = currentWorkLog?.last_status;
+
+        // If running, set up interval
+        if (currentWorkLog?.last_status === WorkLogStatusEnum.RUNNING) {
+            timerIntervalRef.current = setInterval(updateLiveTime, 1000);
+        }
+
+        return () => {
+            if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+            }
+        };
+    }, [currentWorkLog, fetchReport]);
+
+
     // Format time as HH:MM
     const formatTime = (hours, minutes) => {
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
@@ -103,7 +154,14 @@ const WorkReportSummary = () => {
         // If it's today and work is running, show "Active" in green
         if (isToday && currentWorkLog && currentWorkLog.last_status === WorkLogStatusEnum.RUNNING) {
             return (
-                <span className="badge" style={{ backgroundColor: '#10b981', color: 'white' }}>
+                <span className="badge" style={{ backgroundColor: '#10b981', color: 'white', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        backgroundColor: 'white',
+                        animation: 'pulse 1s infinite'
+                    }}></span>
                     Active
                 </span>
             );
@@ -114,7 +172,14 @@ const WorkReportSummary = () => {
     };
 
     // Calculate total hours
-    const totalMinutes = workLogs.reduce((sum, log) => sum + (log.time_worked_minutes || 0), 0);
+    const totalMinutes = workLogs.reduce((sum, log) => {
+        // If this log is for today, use the live calculated time
+        if (log.work_date === getTodayDate() && currentWorkLog?.last_status === WorkLogStatusEnum.RUNNING) {
+            return sum + liveTotalMinutes;
+        }
+        return sum + (log.time_worked_minutes || 0);
+    }, 0);
+
     const totalHours = {
         hours: Math.floor(totalMinutes / 60),
         minutes: totalMinutes % 60
@@ -156,24 +221,37 @@ const WorkReportSummary = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {workLogs.map((log) => (
-                                    <tr key={log.id}>
-                                        <td>
-                                            <strong>{formatDate(log.work_date)}</strong>
-                                        </td>
-                                        <td>
-                                            <span style={{ fontFamily: 'monospace', fontSize: '1rem' }}>
-                                                {formatTime(Math.floor(log.time_worked_minutes / 60), log.time_worked_minutes % 60)}
-                                            </span>
-                                        </td>
-                                        <td>
-                                                {getStatusBadge(log)}
-                                        </td>
-                                        <td>
-                                            —
-                                        </td>
-                                    </tr>
-                                ))}
+                                {workLogs.map((log) => {
+                                    const isToday = log.work_date === getTodayDate();
+                                    const isLive = isToday && currentWorkLog?.last_status === WorkLogStatusEnum.RUNNING;
+                                    
+                                    // Use live minutes for today if running, otherwise use storedMinutes
+                                    const mins = isLive ? liveTotalMinutes : (log.time_worked_minutes || 0);
+                                    
+                                    return (
+                                        <tr key={log.id}>
+                                            <td>
+                                                <strong>{formatDate(log.work_date)}</strong>
+                                            </td>
+                                            <td>
+                                                <span style={{ 
+                                                    fontFamily: 'monospace', 
+                                                    fontSize: '1rem',
+                                                    color: isLive ? '#10b981' : 'inherit',
+                                                    fontWeight: isLive ? '600' : 'normal'
+                                                }}>
+                                                    {formatTime(Math.floor(mins / 60), mins % 60)}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                    {getStatusBadge(log)}
+                                            </td>
+                                            <td>
+                                                —
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                             <tfoot>
                                 <tr style={{ 
@@ -198,6 +276,13 @@ const WorkReportSummary = () => {
                     </>
                 )}
             </div>
+             <style>{`
+                @keyframes pulse {
+                    0% { opacity: 1; }
+                    50% { opacity: 0.5; }
+                    100% { opacity: 1; }
+                }
+            `}</style>
         </div>
     );
 };

@@ -10,7 +10,6 @@ use App\Repositories\WorkLogRepository;
 use App\Models\User;
 use App\DTOs\WorkLogReportDTO;
 use App\DTOs\WorkLogCalculationDTO;
-use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\WorkLogsReport;
 use App\Repositories\WorkLogReportRepository;
 
@@ -19,14 +18,15 @@ class WorkLogService
     public function __construct(
         private WorkLogRepository $workLogsRepository,
         private WorkLogReportRepository $workLogReportRepository
-    ) {}
+    ) {
+    }
 
     public function storeLog(int $userId, WorkLogStatusEnum $status): WorkLog
     {
         $lastLog = User::findOrFail($userId)->latestWorkLog;
 
-        if ($lastLog && $lastLog->status === $status->value) {
-            throw new \Exception('Invalid action sequence');
+        if (!$lastLog->created_at->isToday()) {
+            $this->workLogReportRepository->updateOrCreateDailyReport($userId, now()->today(), 0);
         }
 
         $workLog = $this->workLogsRepository->create($userId, $status->value);

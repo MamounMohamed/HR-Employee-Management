@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { API } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -33,6 +33,25 @@ const WorkReport = ({ onDaySelect }) => {
     const [employeesLoading, setEmployeesLoading] = useState(false);
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(15);
+    
+    // Live mode state for HR viewing working employees
+    const [liveStatus, setLiveStatus] = useState(null); // { is_running, created_at }
+    const [liveElapsedMinutes, setLiveElapsedMinutes] = useState(0);
+    const timerIntervalRef = useRef(null);
+    const statusCheckIntervalRef = useRef(null);
+
+    // Check if date is today
+    const isToday = (dateString) => {
+        return dateString === getTodayDate();
+    };
+
+    // Calculate elapsed minutes from start time
+    const calculateElapsedMinutes = (startTime) => {
+        if (!startTime) return 0;
+        const start = new Date(startTime);
+        const now = new Date();
+        return Math.floor((now - start) / (1000 * 60));
+    };
 
     // Load employees list for HR users (fetch all pages)
     useEffect(() => {
@@ -72,10 +91,18 @@ const WorkReport = ({ onDaySelect }) => {
     // Fetch report data
     const fetchReport = useCallback(async () => {
         setLoading(true);
+        // Stop live mode when fetching new data
+        stopLiveMode();
+        
         try {
             const userId = user.role === UserRoleEnum.HR ? selectedUserId : null;
             const response = await API.getWorkReport(startDate, endDate, userId, page, perPage);
             setReportData(response);
+            
+            // For HR viewing a specific employee, check if they're currently working
+            if (user.role === UserRoleEnum.HR && selectedUserId) {
+                await checkLiveStatus(selectedUserId);
+            }
         } catch (err) {
             addToast(err.message || 'Failed to load work report', 'error');
             setReportData(null);
@@ -83,6 +110,77 @@ const WorkReport = ({ onDaySelect }) => {
             setLoading(false);
         }
     }, [startDate, endDate, selectedUserId, user, addToast, page, perPage]);
+
+    // Check live status for a user
+    const checkLiveStatus = async (userId) => {
+        if (!userId) return;
+        
+        // Initial check
+        await performStatusCheck(userId);
+        
+        // Start continuous polling (every 10 seconds)
+        if (!statusCheckIntervalRef.current) {
+            statusCheckIntervalRef.current = setInterval(async () => {
+                await performStatusCheck(userId);
+            }, 10000);
+        }
+    };
+
+    // Perform the status check and update UI state accordingly
+    const performStatusCheck = async (userId) => {
+        try {
+            const response = await API.getLatestWorkLogStatus(userId);
+            const { is_running, created_at } = response.data;
+            
+            setLiveStatus(response.data);
+            
+            if (is_running && created_at) {
+                // User is working: ensure timer is running
+                if (!timerIntervalRef.current) {
+                    setLiveElapsedMinutes(calculateElapsedMinutes(created_at));
+                    timerIntervalRef.current = setInterval(() => {
+                        setLiveElapsedMinutes(calculateElapsedMinutes(created_at));
+                    }, 1000);
+                }
+            } else {
+                // User is NOT working: stop timer but KEEP polling
+                if (timerIntervalRef.current) {
+                    clearInterval(timerIntervalRef.current);
+                    timerIntervalRef.current = null;
+                    
+                    // Fetch fresh report data to ensure we have the latest static data
+                    const reportResponse = await API.getWorkReport(startDate, endDate, userId, page, perPage);
+                    setReportData(reportResponse);
+                }
+                setLiveElapsedMinutes(0);
+            }
+        } catch (err) {
+            console.error('Failed to check live status:', err);
+        }
+    };
+
+    // Stop all live mode activities (polling and timer)
+    // Called only when unmounting or changing filters/employees
+    const stopLiveMode = () => {
+        setLiveStatus(null);
+        setLiveElapsedMinutes(0);
+        
+        if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+        }
+        if (statusCheckIntervalRef.current) {
+            clearInterval(statusCheckIntervalRef.current);
+            statusCheckIntervalRef.current = null;
+        }
+    };
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            stopLiveMode();
+        };
+    }, []);
 
     // Load report on mount or when refresh is triggered
     useEffect(() => {
@@ -101,17 +199,30 @@ const WorkReport = ({ onDaySelect }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showEmployeeDropdown]);
 
-    // Calculate total hours from work logs
+    // Calculate total hours from work logs (including live time)
     const calculateTotalHours = () => {
         if (!reportData || !reportData.data) return { hours: 0, minutes: 0 };
         
         const logs = reportData.data;
-        const totalMinutes = logs.reduce((sum, log) => sum + (log.time_worked_minutes || 0), 0);
+        let totalMinutes = logs.reduce((sum, log) => sum + (log.time_worked_minutes || 0), 0);
+        
+        // Add live elapsed time if user is working
+        if (liveStatus?.is_running) {
+            totalMinutes += liveElapsedMinutes;
+        }
         
         return {
             hours: Math.floor(totalMinutes / 60),
             minutes: totalMinutes % 60
         };
+    };
+
+    // Get displayed time for a log row (live or static)
+    const getDisplayedMinutes = (log) => {
+        if (isToday(log.work_date) && liveStatus?.is_running) {
+            return (log.time_worked_minutes || 0) + liveElapsedMinutes;
+        }
+        return log.time_worked_minutes || 0;
     };
 
     // Format time as HH:MM
@@ -145,6 +256,7 @@ const WorkReport = ({ onDaySelect }) => {
         if (selectedUserId) {
             setSelectedUserId(null);
             setSelectedEmployeeName('');
+            stopLiveMode(); // Stop live mode when changing employee
         }
     };
 
@@ -162,6 +274,7 @@ const WorkReport = ({ onDaySelect }) => {
         setSelectedEmployeeName('');
         setEmployeeSearch('');
         setShowEmployeeDropdown(false);
+        stopLiveMode();
     };
 
     // Handle row click to navigate to day details page
@@ -249,9 +362,34 @@ const WorkReport = ({ onDaySelect }) => {
     return (
         <div className="table-container" style={{ marginBottom: '2rem' }}>
             <div style={{ padding: '2rem' }}>
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
-                    Work Report
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <h2 style={{ fontSize: '1.5rem', margin: 0, color: 'var(--color-text-primary)' }}>
+                        Work Report
+                    </h2>
+                    {liveStatus?.is_running && (
+                        <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%)',
+                            border: '1px solid rgba(34, 197, 94, 0.4)',
+                            color: 'rgb(34, 197, 94)',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '20px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600'
+                        }}>
+                            <span style={{
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                background: 'rgb(34, 197, 94)',
+                                animation: 'pulse 1s infinite'
+                            }}></span>
+                            {selectedEmployeeName || 'User'} is working
+                        </span>
+                    )}
+                </div>
 
                 {/* Filters */}
                 <div style={{ 
@@ -436,38 +574,86 @@ const WorkReport = ({ onDaySelect }) => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {workLogs.map((log) => (
-                                            <tr 
-                                                key={log.id}
-                                                onClick={() => handleRowClick(log)}
-                                                style={{
-                                                    cursor: 'pointer',
-                                                    transition: 'background 0.2s'
-                                                }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-surface-hover)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = ''}
-                                            >
-                                                <td>
-                                                    <strong>{formatDate(log.work_date)}</strong>
-                                                </td>
-                                                <td>
-                                                    <span style={{ fontFamily: 'monospace', fontSize: '1rem' }}>
-                                                        {formatTime(Math.floor(log.time_worked_minutes / 60), log.time_worked_minutes % 60)}
-                                                    </span>
-                                                </td>
-                                                <td style={{ maxWidth: '300px', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
-                                                    {log.notes || '-'}
-                                                </td>
-                                                <td>
-                                                    <span style={{ 
-                                                        color: 'var(--color-primary)', 
-                                                        fontSize: '1.25rem' 
-                                                    }}>
-                                                        →
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {workLogs.map((log) => {
+                                            const isLiveRow = isToday(log.work_date) && liveStatus?.is_running;
+                                            const displayedMins = getDisplayedMinutes(log);
+                                            
+                                            return (
+                                                <tr 
+                                                    key={log.id}
+                                                    onClick={() => handleRowClick(log)}
+                                                    style={{
+                                                        cursor: 'pointer',
+                                                        transition: 'background 0.2s',
+                                                        background: isLiveRow ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.02) 100%)' : ''
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = isLiveRow 
+                                                        ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 100%)'
+                                                        : 'var(--color-surface-hover)'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = isLiveRow 
+                                                        ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.02) 100%)'
+                                                        : ''}
+                                                >
+                                                    <td>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <strong>{formatDate(log.work_date)}</strong>
+                                                            {isLiveRow && (
+                                                                <span style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '0.25rem',
+                                                                    background: 'rgba(34, 197, 94, 0.2)',
+                                                                    color: 'rgb(34, 197, 94)',
+                                                                    padding: '0.125rem 0.5rem',
+                                                                    borderRadius: '10px',
+                                                                    fontSize: '0.65rem',
+                                                                    fontWeight: '700'
+                                                                }}>
+                                                                    <span style={{
+                                                                        width: '6px',
+                                                                        height: '6px',
+                                                                        borderRadius: '50%',
+                                                                        background: 'rgb(34, 197, 94)',
+                                                                        animation: 'pulse 1s infinite'
+                                                                    }}></span>
+                                                                    LIVE
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span style={{ 
+                                                            fontFamily: 'monospace', 
+                                                            fontSize: '1rem',
+                                                            color: isLiveRow ? 'rgb(34, 197, 94)' : 'inherit',
+                                                            fontWeight: isLiveRow ? '600' : 'normal'
+                                                        }}>
+                                                            {formatTime(Math.floor(displayedMins / 60), displayedMins % 60)}
+                                                        </span>
+                                                        {isLiveRow && (
+                                                            <span style={{ 
+                                                                marginLeft: '0.5rem', 
+                                                                fontSize: '0.7rem', 
+                                                                color: 'var(--color-text-tertiary)' 
+                                                            }}>
+                                                                (updating...)
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ maxWidth: '300px', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                                                        {log.notes || '-'}
+                                                    </td>
+                                                    <td>
+                                                        <span style={{ 
+                                                            color: 'var(--color-primary)', 
+                                                            fontSize: '1.25rem' 
+                                                        }}>
+                                                            →
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                     <tfoot>
                                         <tr style={{ 
@@ -477,9 +663,22 @@ const WorkReport = ({ onDaySelect }) => {
                                         }}>
                                             <td>Total</td>
                                             <td>
-                                                <span style={{ fontFamily: 'monospace', fontSize: '1.125rem', color: 'var(--color-primary)' }}>
+                                                <span style={{ 
+                                                    fontFamily: 'monospace', 
+                                                    fontSize: '1.125rem', 
+                                                    color: liveStatus?.is_running ? 'rgb(34, 197, 94)' : 'var(--color-primary)' 
+                                                }}>
                                                     {formatTime(totalHours.hours, totalHours.minutes)}
                                                 </span>
+                                                {liveStatus?.is_running && (
+                                                    <span style={{ 
+                                                        marginLeft: '0.5rem', 
+                                                        fontSize: '0.7rem', 
+                                                        color: 'var(--color-text-tertiary)' 
+                                                    }}>
+                                                        (live)
+                                                    </span>
+                                                )}
                                             </td>
                                             <td></td>
                                             <td></td>
@@ -493,6 +692,14 @@ const WorkReport = ({ onDaySelect }) => {
                     </>
                 )}
             </div>
+
+            {/* CSS for animations */}
+            <style>{`
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.5; transform: scale(0.95); }
+                }
+            `}</style>
         </div>
     );
 };
