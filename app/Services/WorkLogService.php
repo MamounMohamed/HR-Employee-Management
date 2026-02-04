@@ -24,7 +24,7 @@ class WorkLogService
     {
         $lastLog = User::findOrFail($userId)->latestWorkLog;
 
-        if ($lastLog && !$lastLog->created_at->isToday()) {
+        if (!$lastLog || !$lastLog->created_at->isToday()) {
             $this->workLogReportRepository->updateOrCreateDailyReport($userId, now()->today(), 0);
         }
 
