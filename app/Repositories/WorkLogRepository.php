@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\WorkLog;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use App\Models\User;
 
 class WorkLogRepository
 {
@@ -22,5 +23,13 @@ class WorkLogRepository
             ->whereDate('created_at', $day)
             ->orderBy('created_at')
             ->get();
+    }
+    public function getUsersWithLatestWorkLog(): Collection
+    {
+        return User::with('latestWorkLog')->get();
+    }
+    public function getUserWithLastWorkLog(int $userId): User
+    {
+        return User::with('latestWorkLog')->findOrFail($userId);
     }
 }

@@ -24,7 +24,7 @@ class WorkLogService
     {
         $lastLog = User::findOrFail($userId)->latestWorkLog;
 
-        if (!$lastLog->created_at->isToday()) {
+        if ($lastLog && !$lastLog->created_at->isToday()) {
             $this->workLogReportRepository->updateOrCreateDailyReport($userId, now()->today(), 0);
         }
 
@@ -69,7 +69,7 @@ class WorkLogService
     }
     public function autoEndRunningSessions(): int
     {
-        $users = User::with('latestWorkLog')->get();
+        $users = $this->workLogsRepository->getUsersWithLatestWorkLog();
         $runningUsers = $users->filter(fn($user) => $user->latestWorkLog?->status->isRunning());
         foreach ($runningUsers as $user) {
             $this->storeLog($user->id, WorkLogStatusEnum::STOPPED);
@@ -80,7 +80,7 @@ class WorkLogService
 
     public function getLatestStatus(int $userId): LatestStatusDto
     {
-        $user = User::with('latestWorkLog')->findOrFail($userId);
+        $user = $this->workLogsRepository->getUserWithLastWorkLog($userId);
         return LatestStatusDto::fromWorkLog($user->latestWorkLog);
     }
 }
