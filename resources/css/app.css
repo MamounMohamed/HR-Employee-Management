@@ -437,6 +437,18 @@ p {
     box-shadow: var(--shadow-md);
 }
 
+@media (min-width: 768px) {
+    .navbar {
+        margin-left: 280px;
+        transition: margin-left var(--transition-base);
+        border-left: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .navbar-content {
+        padding-left: var(--spacing-lg);
+    }
+}
+
 .navbar-content {
     display: flex;
     align-items: center;
@@ -451,6 +463,23 @@ p {
     font-weight: 800;
     color: var(--color-text-primary);
     text-decoration: none;
+    transition: opacity var(--transition-base);
+}
+
+.navbar-brand:hover {
+    opacity: 0.8;
+}
+
+@media (min-width: 768px) {
+    .navbar-brand span {
+        display: inline;
+    }
+}
+
+@media (max-width: 767px) {
+    .navbar-brand span {
+        display: inline;
+    }
 }
 
 .navbar-logo {
@@ -463,6 +492,9 @@ p {
     justify-content: center;
     font-size: var(--font-size-lg);
     color: white;
+    font-weight: 800;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+    flex-shrink: 0;
 }
 
 .navbar-menu {
@@ -509,6 +541,243 @@ p {
     color: var(--color-text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.navbar-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+    transition: background var(--transition-base);
+}
+
+.navbar-menu-toggle:hover {
+    background: var(--color-surface);
+}
+
+@media (max-width: 767px) {
+    .navbar-menu-toggle {
+        display: block;
+    }
+}
+
+/* ===================================
+   Sidebar
+   =================================== */
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: none;
+}
+
+@media (max-width: 767px) {
+    .sidebar-overlay {
+        display: block;
+    }
+}
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 280px;
+    background: var(--color-bg-secondary);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform var(--transition-base);
+    overflow: hidden;
+    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar.sidebar-open {
+    transform: translateX(0);
+}
+
+@media (min-width: 768px) {
+    .sidebar {
+        transform: translateX(0);
+    }
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, var(--color-bg-secondary), var(--color-bg-tertiary));
+    min-height: 73px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex: 1;
+}
+
+.sidebar-brand-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sidebar-brand-title {
+    font-size: var(--font-size-lg);
+    font-weight: 800;
+    color: var(--color-text-primary);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.sidebar-brand-subtitle {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1;
+}
+
+.sidebar-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--color-surface);
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: background var(--transition-base);
+}
+
+.sidebar-toggle-btn:hover {
+    background: var(--color-surface-hover);
+}
+
+@media (min-width: 768px) {
+    .sidebar-toggle-btn {
+        display: none;
+    }
+}
+
+.sidebar-nav {
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    flex: 1;
+    overflow-y: auto;
+}
+
+.sidebar-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    text-align: left;
+    width: 100%;
+    position: relative;
+}
+
+.sidebar-nav-btn::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 0;
+    background: var(--color-primary);
+    border-radius: 0 2px 2px 0;
+    transition: height var(--transition-base);
+}
+
+.sidebar-nav-btn:hover {
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    padding-left: calc(var(--spacing-lg) + 4px);
+}
+
+.sidebar-nav-btn:hover::before {
+    height: 60%;
+}
+
+.sidebar-nav-btn.active {
+    background: linear-gradient(90deg, rgba(124, 58, 237, 0.2), rgba(124, 58, 237, 0.05));
+    color: var(--color-text-primary);
+    padding-left: calc(var(--spacing-lg) + 4px);
+    font-weight: 600;
+}
+
+.sidebar-nav-btn.active::before {
+    height: 80%;
+    background: var(--color-primary);
+    box-shadow: 0 0 8px rgba(124, 58, 237, 0.5);
+}
+
+.sidebar-nav-btn svg {
+    flex-shrink: 0;
+}
+
+/* ===================================
+   Page Wrapper with Sidebar
+   =================================== */
+.page-wrapper {
+    min-height: calc(100vh - 73px);
+    margin-top: 73px;
+    transition: margin-left var(--transition-base);
+}
+
+@media (min-width: 768px) {
+    .page-wrapper {
+        margin-left: 280px;
+    }
+}
+
+/* Visual connection between navbar and sidebar */
+/* Better visual integration between navbar and sidebar */
+@media (min-width: 768px) {
+    .sidebar::after {
+        content: '';
+        position: absolute;
+        top: 73px;
+        right: 0;
+        width: 1px;
+        height: calc(100vh - 73px);
+        background: linear-gradient(
+            to bottom,
+            transparent,
+            rgba(255, 255, 255, 0.1) 10%,
+            rgba(255, 255, 255, 0.1) 90%,
+            transparent
+        );
+        pointer-events: none;
+    }
 }
 
 /* ===================================

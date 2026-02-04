@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EmployeeController;
+use App\Http\Controllers\Api\WorkLogController;
+use App\Http\Controllers\Api\WorkLogReportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -40,3 +42,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{employee}/reactivate', [EmployeeController::class, 'reactivate'])->name('employees.reactivate')->withTrashed();
     });
 });
+
+Route::middleware('auth:sanctum')
+    ->prefix('work-log')
+    ->group(function () {
+        Route::post('/', [WorkLogController::class, 'store']);
+        Route::get('/calculate', [WorkLogController::class, 'calculateWorkMinutes']);
+        Route::get('/latest-status', [WorkLogController::class, 'latestStatus']);
+        Route::get('/reports', [WorkLogReportController::class, 'index']);
+        Route::patch(
+            '/reports/notes',
+            [WorkLogReportController::class, 'updateNotes']
+        );
+        Route::get(
+            '/reports/day-details',
+            [WorkLogReportController::class, 'dayDetails']
+        );
+    });

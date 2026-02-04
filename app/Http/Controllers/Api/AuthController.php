@@ -19,8 +19,7 @@ class AuthController extends Controller
 {
     public function __construct(
         private readonly ResponseService $response
-    ) {
-    }
+    ) {}
 
     /**
      * Handle login request
@@ -48,14 +47,6 @@ class AuthController extends Controller
                 'email' => ['Your account has been deactivated. Please contact HR.'],
             ])->status(Response::HTTP_FORBIDDEN);
         }
-
-        // Check if user is HR
-        if ($user->role->value !== EmployeeRoleEnum::HR->value) {
-            throw ValidationException::withMessages([
-                'email' => ['You do not have permission to login. Only employees with the role HR can login to this system.'],
-            ])->status(Response::HTTP_FORBIDDEN);
-        }
-
         // Create token
         $token = $user->createToken('auth-token')->plainTextToken;
 

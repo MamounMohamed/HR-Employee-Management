@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { API } from '../api';
+import { UserRoleEnum } from '../enums/UserRoleEnum';
 
 const AuthContext = createContext(null);
 
@@ -42,7 +43,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const isHR = () => {
-        return user?.role === 'hr';
+        return user?.role === UserRoleEnum.HR;
     };
 
     return (

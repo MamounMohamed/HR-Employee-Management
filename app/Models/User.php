@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Enums\EmployeeRoleEnum;
+use App\Enums\EmployeeStatusEnum;
 
 use Laravel\Sanctum\HasApiTokens;
 
@@ -49,8 +51,16 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'role' => \App\Enums\EmployeeRoleEnum::class,
-            'status' => \App\Enums\EmployeeStatusEnum::class,
+            'role' => EmployeeRoleEnum::class,
+            'status' => EmployeeStatusEnum::class,
         ];
+    }
+    public function workLogs()
+    {
+        return $this->hasMany(WorkLog::class);
+    }
+    public function latestWorkLog()
+    {
+        return $this->hasOne(WorkLog::class)->latestOfMany();
     }
 }

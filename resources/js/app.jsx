@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { WorkLogProvider } from './context/WorkLogContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -15,19 +16,21 @@ const App = () => {
         <BrowserRouter>
             <AuthProvider>
                 <ToastProvider>
-                    <Routes>
-                        <Route path="/login" element={<Login />} />
-                        <Route
-                            path="/dashboard"
-                            element={
-                                <ProtectedRoute>
-                                    <Dashboard />
-                                </ProtectedRoute>
-                            }
-                        />
-                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                        <Route path="*" element={<NotFound />} />
-                    </Routes>
+                    <WorkLogProvider>
+                        <Routes>
+                            <Route path="/login" element={<Login />} />
+                            <Route
+                                path="/dashboard"
+                                element={
+                                    <ProtectedRoute>
+                                        <Dashboard />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                            <Route path="*" element={<NotFound />} />
+                        </Routes>
+                    </WorkLogProvider>
                 </ToastProvider>
             </AuthProvider>
         </BrowserRouter>
