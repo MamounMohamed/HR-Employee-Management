@@ -8,18 +8,17 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Repositories\WorkLogRepository;
 use App\Models\User;
-use App\DTOs\WorkLogReportDTO;
 use App\DTOs\WorkLogCalculationDTO;
 use App\Models\WorkLogsReport;
 use App\Repositories\WorkLogReportRepository;
+use App\DTOs\LatestStatusDto;
 
 class WorkLogService
 {
     public function __construct(
         private WorkLogRepository $workLogsRepository,
         private WorkLogReportRepository $workLogReportRepository
-    ) {
-    }
+    ) {}
 
     public function storeLog(int $userId, WorkLogStatusEnum $status): WorkLog
     {
@@ -77,5 +76,11 @@ class WorkLogService
         }
 
         return $runningUsers->count();
+    }
+
+    public function getLatestStatus(int $userId): LatestStatusDto
+    {
+        $user = User::with('latestWorkLog')->findOrFail($userId);
+        return LatestStatusDto::fromWorkLog($user->latestWorkLog);
     }
 }
